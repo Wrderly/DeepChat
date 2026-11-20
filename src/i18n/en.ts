@@ -208,4 +208,7 @@ export const en = {
   apiOptionsReset: 'Reset',
   apiOptionsCustomized: 'This chat uses its own parameters.',
   apiOptionsFollowDefaults: 'This chat follows the default parameters from settings.',
+  apiOptionsDraftNote:
+    'The new chat starts with these parameters; you can still adjust them after the first message.',
+  apiOptionsDraftFollowDefaults: 'The new chat follows the default parameters from settings.',
 } satisfies Record<keyof typeof zh, string>

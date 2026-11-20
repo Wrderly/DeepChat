@@ -196,4 +196,6 @@ export const zh = {
   apiOptionsReset: '恢复默认',
   apiOptionsCustomized: '当前会话已单独设置参数，仅对本会话生效。',
   apiOptionsFollowDefaults: '当前会话跟随设置页的默认参数。',
+  apiOptionsDraftNote: '新会话将使用这些参数；发出第一条消息后仍可在本会话内调整。',
+  apiOptionsDraftFollowDefaults: '新会话将跟随设置页的默认参数。',
 } as const

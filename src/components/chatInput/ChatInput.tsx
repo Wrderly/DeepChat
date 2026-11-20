@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   IconGlobeLanguageOutline14,
   IconPaperclipOutline16,
@@ -10,7 +10,8 @@ import {
 } from '../base/icons.js'
 import { setSearch, setThinking, useSettings } from '../../services/settings.js'
 import { useIsMobile } from '../../app/viewport.js'
-import { sendMessage, stopReply, useChatStore } from '../../services/chat/store.js'
+import { sendMessage, setSessionApiOptions, stopReply, useChatStore } from '../../services/chat/store.js'
+import type { ApiOptions } from '../../services/api/options.js'
 import {
   addDraftFiles,
   EMPTY_DRAFT,
@@ -55,6 +56,27 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const importingHistory = useChatStore((state) => state.importingHistory)
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
+  const sessionOptions = useChatStore((state): ApiOptions | undefined => {
+    const session = sessionId === null ? undefined : state.sessionCache[sessionId]
+    return session ? session.options : undefined
+  })
+  // 新会话在发出第一条消息前还没有会话对象，参数先留在本地，发送时交给新会话
+  const [draftOptions, setDraftOptions] = useState<ApiOptions | undefined>(undefined)
+  const options = sessionId === null ? draftOptions : sessionOptions
+  const setOptions = (next: ApiOptions | undefined) => {
+    if (sessionId === null) {
+      setDraftOptions(next)
+      return
+    }
+    setSessionApiOptions(sessionId, next)
+  }
+  const optionsNote = options
+    ? sessionId === null
+      ? t('apiOptionsDraftNote')
+      : t('apiOptionsCustomized')
+    : sessionId === null
+      ? t('apiOptionsDraftFollowDefaults')
+      : t('apiOptionsFollowDefaults')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const togglesRef = useRef<HTMLDivElement>(null)
@@ -143,7 +165,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       return
     }
     // 文本与上传完成态由提交动作读取最新快照，不使用上一次渲染的草稿。
-    if (!ensureApiKey() || !sendMessage(sessionId)) {
+    if (!ensureApiKey() || !sendMessage(sessionId, options)) {
       return
     }
     stopReadAloud()
@@ -228,26 +250,24 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               <span className={styles.toggleLabel}>{t('search')}</span>
             </button>
           </Tooltip>
-          {sessionId ? (
-            <ApiOptionsPanel sessionId={sessionId}>
-              {({ open, toggle, customized }) => {
-                const button = (
-                  <button
-                    type="button"
-                    className={clsx(styles.toggle, (open || customized) && styles.selected)}
-                    aria-label={t('apiOptionsTitle')}
-                    aria-expanded={open}
-                    onClick={toggle}
-                  >
-                    <IconSlidersOutline14 />
-                    <span className={styles.toggleLabel}>{t('apiOptionsTitle')}</span>
-                  </button>
-                )
-                // 浮层打开时不再显示 tooltip，避免与浮层内容重叠
-                return open ? button : <Tooltip content={t('apiOptionsTooltip')}>{button}</Tooltip>
-              }}
-            </ApiOptionsPanel>
-          ) : null}
+          <ApiOptionsPanel value={options} onChange={setOptions} note={optionsNote}>
+            {({ open, toggle, customized }) => {
+              const button = (
+                <button
+                  type="button"
+                  className={clsx(styles.toggle, (open || customized) && styles.selected)}
+                  aria-label={t('apiOptionsTitle')}
+                  aria-expanded={open}
+                  onClick={toggle}
+                >
+                  <IconSlidersOutline14 />
+                  <span className={styles.toggleLabel}>{t('apiOptionsTitle')}</span>
+                </button>
+              )
+              // 浮层打开时不再显示 tooltip，避免与浮层内容重叠
+              return open ? button : <Tooltip content={t('apiOptionsTooltip')}>{button}</Tooltip>
+            }}
+          </ApiOptionsPanel>
         </div>
         <div className={styles.right}>
           <VoiceButton

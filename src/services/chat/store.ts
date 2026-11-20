@@ -578,9 +578,10 @@ export const setSessionApiOptions = (sessionId: string, options: ApiOptions | un
 
 /**
  * 提交指定会话的最新草稿；null 表示新建会话。
+ * options 只在新建会话时写入，作为该会话第一条消息的初始生成参数。
  * 同步接收成功才清空草稿，附件原件由会话接管；保存失败仍通过保存入口重试。
  */
-export const sendMessage = (targetSessionId: string | null) => {
+export const sendMessage = (targetSessionId: string | null, options?: ApiOptions) => {
   if (get().importingHistory || !get().ready) {
     return false
   }
@@ -605,6 +606,7 @@ export const sendMessage = (targetSessionId: string | null) => {
       updatedAt: now,
       messages: [],
       rootMessageId: null,
+      ...(options ? { options } : {}),
     }
     sessionId = session.id
     touchSession(session.id)
