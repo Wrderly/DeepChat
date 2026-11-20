@@ -254,6 +254,31 @@ export const IconSettingsOutline16 = () => (
   </svg>
 )
 
+/** 生成参数滑块：两条带旋钮的横线，设置页与输入框的参数入口共用 */
+const SlidersOutline = ({ size }: { size: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 16 16"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M1.4 4.7H3.7M7.4 4.7H14.6" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" />
+    <path
+      d="M1.4 11.3H8.6M12.3 11.3H14.6"
+      stroke="currentColor"
+      strokeWidth={1.4}
+      strokeLinecap="round"
+    />
+    <circle cx="5.55" cy="4.7" r="1.85" stroke="currentColor" strokeWidth={1.3} />
+    <circle cx="10.45" cy="11.3" r="1.85" stroke="currentColor" strokeWidth={1.3} />
+  </svg>
+)
+
+export const IconSlidersOutline16 = () => <SlidersOutline size={16} />
+
+export const IconSlidersOutline14 = () => <SlidersOutline size={14} />
+
 export const IconStopFill16 = () => (
   <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path

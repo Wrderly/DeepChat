@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
 import { ApiError, streamMessage } from '../api/client.js'
+import { toRequestParams, type ApiOptions } from '../api/options.js'
 import type { ChatModel, CreateMessageRequest } from '../api/types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
 import {
@@ -50,6 +51,8 @@ const SAFETY_CHECK = { level: 'high' } as const
 const FILE_RETRY_LIMIT = 2
 /** 退避基数，第 n 次重试等待 2^n 倍；连续失败达到上限就放弃，把原始报错展示出来 */
 const FILE_RETRY_BASE_DELAY = 1000
+/** 生成参数改动写入 IndexedDB 的合并延迟：拖动滑块只落盘最后一次 */
+const OPTIONS_SAVE_DELAY = 300
 
 /** 阅读链接始终开启，智能搜索开关控制是否另行声明搜索工具（含边想边搜）。 */
 const serverTools = (search: boolean): CreateMessageRequest['tools'] => {
@@ -259,9 +262,9 @@ export const bindChatPersistence = () => {
   }
 }
 
-/** 按当前开关创建回复：深度思考对应 thinking，智能搜索控制 deepseek_web_search。 */
-const createReply = (): AssistantMessage => {
-  const { thinking, search } = useSettings.getState()
+/** 按当前开关创建回复：深度思考对应 thinking，智能搜索控制 deepseek_web_search，参数取会话覆盖值或设置页默认值。 */
+const createReply = (session?: Pick<Session, 'options'> | null): AssistantMessage => {
+  const { thinking, search, apiOptions } = useSettings.getState()
   return {
     id: createId(),
     role: 'assistant',
@@ -269,6 +272,7 @@ const createReply = (): AssistantMessage => {
     model: MODEL,
     thinking,
     search,
+    options: session?.options ?? apiOptions,
     prefix: true,
     status: 'pending',
     blocks: [],
@@ -547,6 +551,31 @@ const removeSessionData = async (id: string): Promise<boolean> => {
 
 export const stopReply = (sessionId: string) => getStreamController(sessionId)?.abort()
 
+/** 会话级生成参数的落盘定时器：滑块连续触发时只写最后一次 */
+const optionsSaveTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+/** 会话级生成参数：覆盖设置页默认值，传 undefined 恢复跟随默认值；不改变会话的更新顺序 */
+export const setSessionApiOptions = (sessionId: string, options: ApiOptions | undefined) => {
+  if (get().importingHistory || deletingSessions.has(sessionId) || !getSession(sessionId)) {
+    return
+  }
+  updateSession(sessionId, (session) => {
+    const next: Session = { ...session, options }
+    if (!options) {
+      delete next.options
+    }
+    return next
+  })
+  clearTimeout(optionsSaveTimers.get(sessionId))
+  optionsSaveTimers.set(
+    sessionId,
+    setTimeout(() => {
+      optionsSaveTimers.delete(sessionId)
+      persist(sessionId)
+    }, OPTIONS_SAVE_DELAY)
+  )
+}
+
 /**
  * 提交指定会话的最新草稿；null 表示新建会话。
  * 同步接收成功才清空草稿，附件原件由会话接管；保存失败仍通过保存入口重试。
@@ -606,7 +635,7 @@ export const sendMessage = (targetSessionId: string | null) => {
     })),
     createdAt: now,
   }
-  const reply = createReply()
+  const reply = createReply(current)
   updateSession(sessionId, (session) => ({
     ...appendBranch(session, history.at(-1)?.id ?? null, [question, reply]),
     updatedAt: now,
@@ -640,7 +669,7 @@ export const regenerateReply = (sessionId: string, messageId?: string) => {
     return
   }
   const history = path.slice(0, index - 1)
-  const reply = createReply()
+  const reply = createReply(session)
   updateSession(sessionId, (s) => ({
     ...appendBranch(s, question.id, [reply]),
     updatedAt: Date.now(),
@@ -672,7 +701,7 @@ export const editMessage = (sessionId: string, messageId: string, content: strin
     files: previous.files,
     createdAt: Date.now(),
   }
-  const reply = createReply()
+  const reply = createReply(session)
   updateSession(sessionId, (s) => ({
     ...appendBranch(s, path[index - 1]?.id ?? null, [question, reply]),
     updatedAt: Date.now(),
@@ -713,13 +742,14 @@ export const continueReply = (sessionId: string, messageId: string) => {
   ) {
     return
   }
-  const { thinking, search } = useSettings.getState()
+  const { thinking, search, apiOptions } = useSettings.getState()
   const reply: AssistantMessage = {
     ...previous,
     // 未记录请求配置的回复，续写时使用默认模型和当前开关。
     model: previous.model ?? MODEL,
     thinking: previous.thinking ?? thinking,
     search: previous.search ?? search,
+    options: previous.options ?? session.options ?? apiOptions,
     status: 'pending',
     stopReason: undefined,
     stopDetails: undefined,
@@ -1028,6 +1058,10 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             messages,
             thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
             safety_check: SAFETY_CHECK,
+            ...toRequestParams(
+              initial.options ?? useSettings.getState().apiOptions,
+              initial.thinking ?? false
+            ),
             tools: serverTools(initial.search ?? false),
             ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
           },

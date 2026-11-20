@@ -19,6 +19,13 @@ pnpm dev
 
 Open http://localhost:8090.
 
+On Windows you can also double-click `start.bat` in the repository root for a one-click start: it checks Node.js and pnpm, installs dependencies when needed, starts the development server, and opens the browser once the server is ready. If the default port 8090 is taken, the next free port is used.
+
+```powershell
+# Optional: starting port (-Port), start without opening the browser (-NoBrowser)
+powershell -NoProfile -ExecutionPolicy Bypass -File .\start.ps1 -Port 9000 -NoBrowser
+```
+
 To build the static site:
 
 ```sh
@@ -31,6 +38,7 @@ The output is written to `dist/`. Deploy it to a static web server or open `dist
 
 - Multiple conversations with automatic titles, renaming, and deletion; edit prompts, regenerate replies, and switch between message branches.
 - Streaming replies, deep thinking, smart search, link reading, and source citations; stop generation or continue eligible replies.
+- Per-conversation generation parameters (thinking effort, temperature, Top P, max output, stop sequences): Settings → Model parameters holds the defaults for new chats, and the Model parameters entry in the input area overrides or resets them for one conversation.
 - Upload, paste, or drag and drop attachments; use voice input and read replies aloud. A live audio spectrum appears in the first row of the input area while recording on mobile.
 - Markdown, syntax highlighting, KaTeX math, and Mermaid diagrams.
 - Simplified Chinese and English, light and dark themes, mobile layouts, location settings, and chat history import and export.

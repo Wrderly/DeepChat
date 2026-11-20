@@ -178,4 +178,34 @@ export const en = {
   latestReminderLanguage: 'English',
   settingsLocaleZhCN: 'Simplified Chinese',
   settingsLocaleEnUS: 'English',
+  settingDialogAsideModelOptionLabel: 'Model parameters',
+  settingsApiOptionsDescription:
+    'Defaults for new chats. Adjust them per chat from the Model parameters entry below the message box.',
+  apiOptionsTitle: 'Model parameters',
+  apiOptionsTooltip: 'Adjust thinking effort, temperature, and more',
+  apiOptionsDefault: 'Default',
+  apiOptionsUnset: 'Unset',
+  apiOptionsEffort: 'Thinking effort',
+  apiOptionsEffortHint: 'Applies while DeepThink is on. Higher effort thinks longer and deeper.',
+  apiOptionsEffortDisabled: 'DeepThink is off, so thinking effort has no effect.',
+  apiOptionsEffortLow: 'Low',
+  apiOptionsEffortHigh: 'High',
+  apiOptionsEffortMax: 'Max',
+  apiOptionsTemperature: 'Temperature',
+  apiOptionsTemperatureHint:
+    '0–2. Higher values make replies more random. Only applies without thinking; fixed at 1 in thinking mode.',
+  apiOptionsTopP: 'Top P',
+  apiOptionsTopPHint:
+    'Nucleus sampling threshold, lower is more focused. Only applies without thinking; in thinking mode flash clamps to 0.95 and v4-pro uses a fixed 0.95.',
+  apiOptionsMaxTokens: 'Max output',
+  apiOptionsMaxTokensHint:
+    'Token limit per reply, including thinking. Leave empty to let the server decide.',
+  apiOptionsMaxTokensPlaceholder: 'Auto',
+  apiOptionsStopSequences: 'Stop sequences',
+  apiOptionsStopSequencesHint:
+    'Generation stops when any line appears. One per line, up to 16 lines of at most 512 bytes each.',
+  apiOptionsStopSequencesPlaceholder: 'One per line',
+  apiOptionsReset: 'Reset',
+  apiOptionsCustomized: 'This chat uses its own parameters.',
+  apiOptionsFollowDefaults: 'This chat follows the default parameters from settings.',
 } satisfies Record<keyof typeof zh, string>

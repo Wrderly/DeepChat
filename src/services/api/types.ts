@@ -172,11 +172,36 @@ export type DeepseekReadUrlTool = {
   name: 'deepseek_read_url'
 }
 
+/**
+ * 思考强度（output_config.effort）：minimal 按 low、medium 与 xhigh 按 high、ultra 按 max 处理，
+ * 显式设置的 thinking.type 优先于它，thinking 与 effort 都不传时默认开启思考。
+ */
+export type ThinkingEffort =
+  | 'none'
+  | 'minimal'
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'xhigh'
+  | 'ultra'
+  | 'max'
+
+/** 安全审核固定开启，所有请求都走扩展模式。 */
 export type CreateMessageRequest = {
   model: ChatModel
   system: string
   messages: MessageParam[]
   thinking: { type: 'enabled' | 'disabled' }
+  /** 思考强度；仅在开启深度思考时生效 */
+  output_config?: { effort: ThinkingEffort }
+  /** 采样温度，0–2；思考模式下服务端固定为 1 */
+  temperature?: number
+  /** 核采样，0 < top_p ≤ 1；思考模式下最低按 0.95 处理 */
+  top_p?: number
+  /** 单轮输出上限，包含思考消耗的 token */
+  max_tokens?: number
+  /** 命中任一条即停止生成，最多 16 条，每条不超过 512 字节 */
+  stop_sequences?: string[]
   tools: (DeepseekWebSearchTool | DeepseekReadUrlTool)[]
   safety_check: { level: 'high' }
   title?: { enabled: boolean }
@@ -184,7 +209,7 @@ export type CreateMessageRequest = {
 
 // ---------- 响应：流式事件 ----------
 
-export type StopReason = 'end_turn' | 'max_tokens' | 'tool_use' | 'refusal'
+export type StopReason = 'end_turn' | 'max_tokens' | 'tool_use' | 'refusal' | 'stop_sequence'
 
 export type StopDetails = { type: 'refusal'; category: null; explanation: null }
 

@@ -4,6 +4,7 @@ import {
   IconGlobeLanguageOutline14,
   IconPaperclipOutline16,
   IconSendOutline16,
+  IconSlidersOutline14,
   IconStopFill16,
   IconThinkOutline14,
 } from '../base/icons.js'
@@ -24,6 +25,7 @@ import { stopReadAloud } from '../../services/speech/readAloud.js'
 import { IconButton } from '../base/IconButton.js'
 import { Tooltip } from '../base/Tooltip.js'
 import { ensureApiKey } from '../settings/settingsDialogState.js'
+import { ApiOptionsPanel } from '../apiOptions/ApiOptionsPanel.js'
 import { DragMask, useFileDrop } from './DragMask.js'
 import { showToast } from '../base/toastState.js'
 import { ACCEPT, useUploads } from '../../services/attachments.js'
@@ -226,6 +228,26 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               <span className={styles.toggleLabel}>{t('search')}</span>
             </button>
           </Tooltip>
+          {sessionId ? (
+            <ApiOptionsPanel sessionId={sessionId}>
+              {({ open, toggle, customized }) => {
+                const button = (
+                  <button
+                    type="button"
+                    className={clsx(styles.toggle, (open || customized) && styles.selected)}
+                    aria-label={t('apiOptionsTitle')}
+                    aria-expanded={open}
+                    onClick={toggle}
+                  >
+                    <IconSlidersOutline14 />
+                    <span className={styles.toggleLabel}>{t('apiOptionsTitle')}</span>
+                  </button>
+                )
+                // 浮层打开时不再显示 tooltip，避免与浮层内容重叠
+                return open ? button : <Tooltip content={t('apiOptionsTooltip')}>{button}</Tooltip>
+              }}
+            </ApiOptionsPanel>
+          ) : null}
         </div>
         <div className={styles.right}>
           <VoiceButton

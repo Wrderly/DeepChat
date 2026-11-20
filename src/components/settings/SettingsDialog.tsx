@@ -7,6 +7,7 @@ import {
   IconFollowsystemOutline16,
   IconLightOutline16,
   IconSettingsOutline16,
+  IconSlidersOutline16,
   IconUploadOutline14,
 } from '../base/icons.js'
 import {
@@ -20,6 +21,7 @@ import { useChatStore } from '../../services/chat/store.js'
 import { regionCodes, getRegionName, provinces } from '../../services/location.js'
 import {
   isChineseBrowser,
+  setApiOptions,
   setLocale,
   setLocation,
   setThemePreference,
@@ -28,16 +30,19 @@ import {
   type ThemePreference,
 } from '../../services/settings.js'
 import { useTranslate, type TranslationKey, type TranslationMessage } from '../../i18n/index.js'
+import { ApiOptionsControls } from '../apiOptions/ApiOptionsControls.js'
 import { Button } from '../base/Button.js'
 import { Modal } from '../base/Modal.js'
 import { Select } from '../base/Select.js'
 import { showToast } from '../base/toastState.js'
 import { ApiKeyConfirm, ApiKeyField, useApiKeyEditor } from './ApiKeyField.js'
 import { closeSettings, useSettingsDialog, type SettingsSection } from './settingsDialogState.js'
+import apiStyles from '../apiOptions/ApiOptions.module.css'
 import styles from './Settings.module.css'
 
 /**
- * 设置弹窗：分「通用设置」（主题、语言、朗读音色、位置）与「数据管理」（API Key、导入、导出、删除）。
+ * 设置弹窗：分「通用设置」（主题、语言、朗读音色、位置）、「模型参数」（新对话的默认生成参数）
+ * 与「数据管理」（API Key、导入、导出、删除）。
  * 桌面端为居中弹窗、左侧导航；移动端为底部弹层、导航横排在内容上方
  */
 export const SettingsDialog = () => {
@@ -50,6 +55,11 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
     value: 'general',
     label: 'settingDialogAsideGeneralOptionLabel',
     icon: <IconSettingsOutline16 />,
+  },
+  {
+    value: 'model',
+    label: 'settingDialogAsideModelOptionLabel',
+    icon: <IconSlidersOutline16 />,
   },
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
 ]
@@ -101,6 +111,8 @@ const SettingsContent = () => {
               <TtsVoiceSetting />
               <LocationSetting />
             </>
+          ) : section === 'model' ? (
+            <ModelSetting />
           ) : (
             <>
               <ApiKeyField editor={apiKeyEditor} />
@@ -129,6 +141,21 @@ const SettingsContent = () => {
       {historyImport.file ? <ImportConfirm historyImport={historyImport} /> : null}
       {historyDelete.opened ? <DeleteAllConfirm historyDelete={historyDelete} /> : null}
     </>
+  )
+}
+
+/** 新对话默认使用的生成参数；单个会话可以在输入框的参数浮层里覆盖 */
+const ModelSetting = () => {
+  const t = useTranslate()
+  const apiOptions = useSettings((state) => state.apiOptions)
+  return (
+    <div className={apiStyles.group}>
+      <div className={apiStyles.groupHead}>
+        <div className={apiStyles.groupTitle}>{t('settingDialogAsideModelOptionLabel')}</div>
+        <p className={apiStyles.groupDescription}>{t('settingsApiOptionsDescription')}</p>
+      </div>
+      <ApiOptionsControls value={apiOptions} onChange={setApiOptions} hints />
+    </div>
   )
 }
 

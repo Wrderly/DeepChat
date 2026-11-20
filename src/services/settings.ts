@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { parseApiOptions, type ApiOptions } from './api/options.js'
 import type { TtsVoice } from './api/speech.js'
 import { normalizeLocation, type UserLocation } from './location.js'
 
@@ -7,7 +8,10 @@ export type Locale = 'zh-CN' | 'en-US'
 /** 主题偏好；默认跟随系统 */
 export type ThemePreference = 'light' | 'dark' | 'system'
 
-/** 本机设置，存 localStorage：API Key、语言、主题、位置、朗读音色、深度思考与智能搜索开关、侧边栏收起状态 */
+/**
+ * 本机设置，存 localStorage：API Key、语言、主题、位置、朗读音色、深度思考与智能搜索开关、
+ * 侧边栏收起状态、新对话默认使用的生成参数
+ */
 type Settings = {
   apiKey: string | null
   locale: Locale
@@ -17,6 +21,7 @@ type Settings = {
   thinking: boolean
   search: boolean
   siderCollapsed: boolean
+  apiOptions: ApiOptions
 }
 
 const KEYS = {
@@ -28,6 +33,7 @@ const KEYS = {
   thinking: 'chat-demo:thinking',
   search: 'chat-demo:search',
   siderCollapsed: 'chat-demo:sider-collapsed',
+  apiOptions: 'chat-demo:api-options',
 } as const
 
 const read = (key: string) => {
@@ -96,6 +102,7 @@ export const useSettings = create<Settings>(() => ({
   thinking: read(KEYS.thinking) === 'true',
   search: read(KEYS.search) === 'true',
   siderCollapsed: read(KEYS.siderCollapsed) === 'true',
+  apiOptions: parseApiOptions(read(KEYS.apiOptions)),
 }))
 
 export const setLocale = (locale: Locale) => {
@@ -137,4 +144,10 @@ export const setSearch = (search: boolean) => {
 export const setSiderCollapsed = (siderCollapsed: boolean) => {
   write(KEYS.siderCollapsed, String(siderCollapsed))
   useSettings.setState({ siderCollapsed })
+}
+
+/** 新对话默认使用的生成参数；已有会话的覆盖值不受影响 */
+export const setApiOptions = (apiOptions: ApiOptions) => {
+  write(KEYS.apiOptions, JSON.stringify(apiOptions))
+  useSettings.setState({ apiOptions })
 }
