@@ -1,6 +1,11 @@
 :root {
   --message-list-max-width: 840px;
   --message-list-padding-horizontal: 44px;
+  /* 系统栏与刘海安全区：安卓壳会在运行时用窗口内边距覆盖这四个变量 */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
 }
 
 @media (max-width: 1023px) {
