@@ -20,6 +20,11 @@
   opacity: 1;
 }
 
+/* 底部抽屉的遮罩跟着抽屉一起变慢，避免抽屉还在滑、背景已经黑掉 */
+.overlaySheet {
+  transition-duration: 300ms;
+}
+
 .content {
   display: flex;
   flex-direction: column;
@@ -46,8 +51,9 @@
 }
 
 /* 拖动时跟随手指，不做过渡 */
-.contentDragging {
+.content.contentDragging {
   transition: none;
+  will-change: transform;
 }
 
 .header {
@@ -84,9 +90,32 @@
   margin-top: 20px;
 }
 
+@media not all and (min-width: 768px) {
+  /* 移动端底部抽屉：整块从屏幕外滑上来，收起时再滑回去 */
+  .contentSheet {
+    transform: translateY(100%);
+    /* 收起时先用较缓的起步，再加速离场，避免一松手就消失 */
+    transition: transform 280ms cubic-bezier(0.4, 0, 1, 1);
+  }
+
+  .contentSheet.contentVisible {
+    transform: none;
+    transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* 按住标题栏拖动时不要触发页面滚动，否则浏览器会取消 pointermove */
+  .header {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .overlay,
-  .content {
+  .overlaySheet,
+  .content,
+  .contentSheet {
     transition: none;
   }
 }

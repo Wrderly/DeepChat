@@ -73,7 +73,10 @@ export const useDragDismiss = ({ direction, onDismiss, threshold = DEFAULT_THRES
     offset === 0
       ? undefined
       : {
-          transform: direction === 'left' ? `translateX(${offset}px)` : `translateY(${offset}px)`,
+          transform:
+            direction === 'left'
+              ? `translate3d(${offset}px, 0, 0)`
+              : `translate3d(0, ${offset}px, 0)`,
           transition: 'none',
         }
 

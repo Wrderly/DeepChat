@@ -40,7 +40,7 @@ export const ApiOptionsPanel = ({
   const isMobile = useIsMobile()
   const defaults = useSettings((state) => state.apiOptions)
   const thinking = useSettings((state) => state.thinking)
-  const { mounted, closing } = usePresence(open, 140)
+  const { mounted, visible } = usePresence(open, 240)
   const { anchorRef, floatingRef, position } = useAnchoredPosition<HTMLSpanElement, HTMLDivElement>(
     mounted,
     { side: 'top', align: 'start', offset: 8, maxHeight: 560 }
@@ -63,7 +63,7 @@ export const ApiOptionsPanel = ({
               ref={floatingRef}
               className={clsx(
                 styles.panel,
-                open && !closing && styles.panelVisible,
+                visible && styles.panelVisible,
                 drag.dragging && styles.panelDragging
               )}
               style={{ ...position, ...(isMobile ? drag.style : undefined) }}

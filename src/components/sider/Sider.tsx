@@ -145,7 +145,8 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
 /** 移动端抽屉：浮在页面上方，点空白区域、按 Esc 或向左滑动关闭。 */
 export const MobileSider = () => {
   const open = useMobileSider((state) => state.open)
-  const { mounted, closing } = usePresence(open)
+  // 抽屉的过渡是 220ms，多留一点时间再卸载，收起动画才不会被截断
+  const { mounted, visible } = usePresence(open, 260)
   const drag = useDragDismiss({ direction: 'left', onDismiss: closeMobileSider, threshold: 64 })
 
   useEffect(() => {
@@ -164,15 +165,14 @@ export const MobileSider = () => {
   if (!mounted) {
     return null
   }
-  const expanded = open && !closing
   return (
     <>
       <div
-        className={clsx(styles.drawerMask, expanded && styles.drawerMaskVisible)}
+        className={clsx(styles.drawerMask, visible && styles.drawerMaskVisible)}
         onClick={closeMobileSider}
       />
       <div
-        className={clsx(styles.drawer, expanded && styles.drawerVisible)}
+        className={clsx(styles.drawer, visible && styles.drawerVisible)}
         style={drag.style}
         data-overlay="drawer"
         {...drag.handlers}

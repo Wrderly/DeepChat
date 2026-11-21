@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslate } from '../../i18n/index.js'
 import { useIsMobile } from '../../app/viewport.js'
@@ -21,6 +21,8 @@ export const Modal = ({
   footer,
   closable = false,
   closing = false,
+  visible,
+  sheet = false,
   dragToClose = false,
   className,
   mainClassName,
@@ -33,6 +35,10 @@ export const Modal = ({
   closable?: boolean
   /** 正在播放关闭过渡，调用方负责在过渡结束后卸载 */
   closing?: boolean
+  /** 由调用方控制展开状态；不传时由 Modal 自己播放进场过渡 */
+  visible?: boolean
+  /** 移动端以底部抽屉的方式滑入、滑出 */
+  sheet?: boolean
   /** 移动端可按住标题栏下拉关闭 */
   dragToClose?: boolean
   className?: string
@@ -47,10 +53,14 @@ export const Modal = ({
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
 
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setEntered(true))
-    return () => cancelAnimationFrame(frame)
-  }, [])
+  useLayoutEffect(() => {
+    if (visible !== undefined) {
+      return
+    }
+    // 先算出初始的「收起」样式再展开，进场过渡从第一帧就开始
+    void document.body.offsetHeight
+    setEntered(true)
+  }, [visible])
 
   useEffect(() => {
     const token = {}
@@ -72,17 +82,24 @@ export const Modal = ({
     onDismiss: onClose,
   })
   const draggable = dragToClose && isMobile && !closing
+  const sheetMode = sheet && isMobile
+  const shown = visible ?? entered
 
   return createPortal(
     <div
-      className={clsx(styles.overlay, entered && !closing && styles.overlayVisible)}
+      className={clsx(
+        styles.overlay,
+        sheetMode && styles.overlaySheet,
+        shown && !closing && styles.overlayVisible
+      )}
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
       <div
         className={clsx(
           styles.content,
           className,
-          entered && !closing && styles.contentVisible,
+          sheetMode && styles.contentSheet,
+          shown && !closing && styles.contentVisible,
           draggable && drag.dragging && styles.contentDragging
         )}
         style={draggable ? drag.style : undefined}

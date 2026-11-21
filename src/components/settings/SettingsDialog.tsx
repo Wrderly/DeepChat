@@ -49,8 +49,9 @@ import styles from './Settings.module.css'
  */
 export const SettingsDialog = () => {
   const open = useSettingsDialog((state) => state.open)
-  const { mounted, closing } = usePresence(open)
-  return mounted ? <SettingsContent closing={closing} /> : null
+  // 底部抽屉的滑出比通用弹窗长一点，卸载时间要跟着放宽
+  const { mounted, visible, closing } = usePresence(open, 320)
+  return mounted ? <SettingsContent visible={visible} closing={closing} /> : null
 }
 
 const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode }[] = [
@@ -67,7 +68,7 @@ const sections: { value: SettingsSection; label: TranslationKey; icon: ReactNode
   { value: 'data', label: 'settingDialogAsideDataOptionLabel', icon: <IconDataOutline16 /> },
 ]
 
-const SettingsContent = ({ closing }: { closing: boolean }) => {
+const SettingsContent = ({ visible, closing }: { visible: boolean; closing: boolean }) => {
   const t = useTranslate()
   const isMobile = useIsMobile()
   // 打开时按调用方指定的分组选中，之后在弹窗内切换
@@ -83,7 +84,9 @@ const SettingsContent = ({ closing }: { closing: boolean }) => {
       <Modal
         title={t('settings')}
         closable
+        visible={visible}
         closing={closing}
+        sheet
         dragToClose
         className={styles.dialog}
         mainClassName={styles.dialogMain}
