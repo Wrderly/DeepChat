@@ -8,8 +8,10 @@ declare const styles: {
   readonly "bottom": string;
   readonly "alwaysShow": string;
   readonly "editor": string;
+  readonly "editorLabel": string;
   readonly "textarea": string;
   readonly "editorActions": string;
+  readonly "savedFlash": string;
 };
 export = styles;
 

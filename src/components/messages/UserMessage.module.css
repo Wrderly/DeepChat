@@ -41,7 +41,8 @@
 }
 
 @media not all and (min-width: 440px) {
-  .bubble {
+  .bubble,
+  .editor {
     max-width: calc(100% - 68px);
   }
 }
@@ -70,22 +71,33 @@
   opacity: 1;
 }
 
+/* 编辑中的提问沿用气泡外形：右对齐、同样的底色与圆角，只靠更浅一圈的描边提示正在编辑 */
 .editor {
-  width: 100%;
+  max-width: calc(100% - 88px);
   box-sizing: border-box;
-  border: 1px solid var(--dsw-alias-brand-primary);
+  border: 1px solid var(--dsw-alias-button-ghost-active-border);
   border-radius: 22px;
-  background-color: var(--dsw-alias-bg-base);
+  background-color: var(--dsw-specific-bubble);
   overflow: hidden;
+}
+
+.editorLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-brand-text);
 }
 
 .textarea {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  min-height: 44px;
+  min-height: 36px;
   max-height: 202px;
-  padding: 10px 16px;
+  padding: 6px 16px 4px;
   border: none;
   outline: none;
   resize: none;
@@ -101,4 +113,20 @@
   justify-content: flex-end;
   gap: 8px;
   margin: 6px 10px 10px;
+}
+
+/* 保存后短暂描边，指明刚刚改动的是这一块 */
+.savedFlash {
+  animation: flashSaved 700ms var(--ds-ease-in-out);
+}
+
+@keyframes flashSaved {
+  0%,
+  30% {
+    box-shadow: 0 0 0 2px var(--dsw-alias-brand-primary);
+  }
+
+  100% {
+    box-shadow: 0 0 0 2px transparent;
+  }
 }

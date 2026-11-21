@@ -1,11 +1,12 @@
 import { useTranslate } from '../../i18n/index.js'
 import clsx from 'clsx'
-import { memo, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   IconBranchOutline16,
   IconEditOutline16,
   IconEllipsisOutline16,
   IconRefreshOutline16,
+  IconThinkOutline16,
   IconWarningOutline16,
 } from '../base/icons.js'
 import { describeReply } from '../../services/chat/describe.js'
@@ -74,6 +75,22 @@ export const AssistantMessage = memo(function AssistantMessage({
     .map((block) => block.thinking)
     .join('')
   const [editing, setEditing] = useState<{ kind: 'thinking' | 'text'; draft: string } | null>(null)
+  const [saved, setSaved] = useState<'thinking' | 'text' | null>(null)
+  const editorRef = useRef<HTMLTextAreaElement>(null)
+  useLayoutEffect(() => {
+    const node = editorRef.current
+    if (editing && node) {
+      node.style.height = 'auto'
+      node.style.height = `${Math.min(node.scrollHeight, 320)}px`
+    }
+  }, [editing, editing?.draft])
+  useEffect(() => {
+    if (!saved) {
+      return
+    }
+    const timer = setTimeout(() => setSaved(null), 700)
+    return () => clearTimeout(timer)
+  }, [saved])
   const saveEdit = () => {
     if (!editing) {
       return
@@ -83,6 +100,7 @@ export const AssistantMessage = memo(function AssistantMessage({
     } else {
       editReplyText(sessionId, message.id, editing.draft)
     }
+    setSaved(editing.kind)
     setEditing(null)
   }
   const menuOptions: MenuOption[] = [
@@ -113,25 +131,73 @@ export const AssistantMessage = memo(function AssistantMessage({
       onSelect: () => branchSession(sessionId, message.id),
     },
   ]
+  const editor = editing ? (
+    <div
+      className={clsx(
+        styles.editor,
+        editing.kind === 'thinking' ? styles.thinkingEditor : styles.answerEditor
+      )}
+    >
+      <div className={styles.editorLabel}>
+        {editing.kind === 'thinking' ? <IconThinkOutline16 /> : <IconEditOutline16 />}
+        <span>{t(editing.kind === 'thinking' ? 'editThinking' : 'editAnswer')}</span>
+      </div>
+      <textarea
+        ref={editorRef}
+        className={styles.editorTextarea}
+        aria-label={t(editing.kind === 'thinking' ? 'editThinking' : 'editAnswer')}
+        autoFocus
+        value={editing.draft}
+        onChange={(event) => setEditing({ ...editing, draft: event.target.value })}
+        onKeyDown={(event) => {
+          if (event.nativeEvent.isComposing) {
+            return
+          }
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            setEditing(null)
+          } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault()
+            saveEdit()
+          }
+        }}
+      />
+      <div className={styles.editorActions}>
+        <Button size="s" variant="outlined" onClick={() => setEditing(null)}>
+          {t('cancel')}
+        </Button>
+        <Button size="s" disabled={!editing.draft.trim()} onClick={saveEdit}>
+          {t('save')}
+        </Button>
+      </div>
+    </div>
+  ) : null
   return (
     <div className={styles.message}>
-      {refused || editing?.kind === 'thinking' ? null : (
-        <ReplyArea
-          message={message}
-          view={view}
-          streaming={streaming}
-          hasResponse={!!responseText}
-        />
+      {refused ? null : (
+        <div className={clsx(saved === 'thinking' && styles.savedFlash)}>
+          <ReplyArea
+            message={message}
+            view={view}
+            streaming={streaming}
+            hasResponse={!!responseText}
+            editor={editing?.kind === 'thinking' ? editor : undefined}
+          />
+        </div>
       )}
-      {answer && editing?.kind !== 'text' ? (
-        <Markdown
-          className="ds-assistant-message-main-content"
-          content={answer.markdown}
-          loading={streaming}
-          cacheKey={message.id}
-          disableLink={false}
-          sources={view.sources}
-        />
+      {editing?.kind === 'text' ? (
+        editor
+      ) : answer ? (
+        <div className={clsx(styles.answer, saved === 'text' && styles.savedFlash)}>
+          <Markdown
+            className="ds-assistant-message-main-content"
+            content={answer.markdown}
+            loading={streaming}
+            cacheKey={message.id}
+            disableLink={false}
+            sources={view.sources}
+          />
+        </div>
       ) : null}
       {waiting ? (
         <div className={styles.waiting}>
@@ -193,37 +259,6 @@ export const AssistantMessage = memo(function AssistantMessage({
               { count: view.searchResults.length }
             )}
           </span>
-        </div>
-      ) : null}
-      {editing ? (
-        <div className={styles.editor}>
-          <textarea
-            className={styles.editorTextarea}
-            aria-label={t(editing.kind === 'thinking' ? 'editThinking' : 'editAnswer')}
-            autoFocus
-            value={editing.draft}
-            onChange={(event) => setEditing({ ...editing, draft: event.target.value })}
-            onKeyDown={(event) => {
-              if (event.nativeEvent.isComposing) {
-                return
-              }
-              if (event.key === 'Escape') {
-                event.preventDefault()
-                setEditing(null)
-              } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-                event.preventDefault()
-                saveEdit()
-              }
-            }}
-          />
-          <div className={styles.editorActions}>
-            <Button size="s" variant="outlined" onClick={() => setEditing(null)}>
-              {t('cancel')}
-            </Button>
-            <Button size="s" disabled={!editing.draft.trim()} onClick={saveEdit}>
-              {t('save')}
-            </Button>
-          </div>
         </div>
       ) : null}
       {streaming ? null : (

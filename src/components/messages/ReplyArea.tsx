@@ -58,11 +58,14 @@ export const ReplyArea = memo(function ReplyArea({
   view,
   streaming,
   hasResponse,
+  editor,
 }: {
   message: AssistantMessage
   view: ReplyView
   streaming: boolean
   hasResponse: boolean
+  /** 编辑思考时用它替换思考正文，标题行（如「已思考（用时 1 秒）」）保持不变 */
+  editor?: ReactNode
 }) {
   useTranslate()
   const [open, setOpen] = useState(true)
@@ -86,7 +89,9 @@ export const ReplyArea = memo(function ReplyArea({
           {open ? <IconChevronDownOutline14 /> : <IconChevronRightOutline14 />}
         </div>
       ) : null}
-      {open || !title ? (
+      {editor ? (
+        editor
+      ) : open || !title ? (
         <div className={styles.steps}>
           {view.steps.map((step, index) => (
             <StepItem

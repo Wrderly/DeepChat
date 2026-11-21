@@ -10,8 +10,13 @@ declare const styles: {
   readonly "alwaysShow": string;
   readonly "continueButton": string;
   readonly "editor": string;
+  readonly "thinkingEditor": string;
+  readonly "answerEditor": string;
+  readonly "editorLabel": string;
   readonly "editorTextarea": string;
   readonly "editorActions": string;
+  readonly "answer": string;
+  readonly "savedFlash": string;
   readonly "summary": string;
   readonly "summaryActive": string;
 };

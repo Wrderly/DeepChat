@@ -1,6 +1,6 @@
 import { useTranslate } from '../../i18n/index.js'
 import clsx from 'clsx'
-import { memo, useLayoutEffect, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useIsMobile } from '../../app/viewport.js'
 import { IconBranchOutline16, IconEditOutline16 } from '../base/icons.js'
 import { getFileViewType, isImage } from '../../services/attachments.js'
@@ -40,9 +40,18 @@ export const UserMessage = memo(function UserMessage({
   const t = useTranslate()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(message.content)
+  const [saved, setSaved] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isMobile = useIsMobile()
   const canSend = !busy && (draft.trim() !== '' || message.files.length > 0)
+
+  useEffect(() => {
+    if (!saved) {
+      return
+    }
+    const timer = setTimeout(() => setSaved(false), 700)
+    return () => clearTimeout(timer)
+  }, [saved])
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current
@@ -55,6 +64,7 @@ export const UserMessage = memo(function UserMessage({
   const saveEdit = () => {
     if (canSend && updateUserMessage(sessionId, message.id, draft.trim())) {
       setEditing(false)
+      setSaved(true)
     }
   }
 
@@ -79,6 +89,10 @@ export const UserMessage = memo(function UserMessage({
       ) : null}
       {editing ? (
         <div className={styles.editor}>
+          <div className={styles.editorLabel}>
+            <IconEditOutline16 />
+            <span>{t('editMessage')}</span>
+          </div>
           <textarea
             ref={textareaRef}
             className={styles.textarea}
@@ -111,7 +125,9 @@ export const UserMessage = memo(function UserMessage({
         </div>
       ) : (
         <>
-          {message.content ? <div className={styles.bubble}>{message.content}</div> : null}
+          {message.content ? (
+            <div className={clsx(styles.bubble, saved && styles.savedFlash)}>{message.content}</div>
+          ) : null}
           <div className={styles.bottom}>
             <div className={clsx(styles.actions, isLast && styles.alwaysShow)}>
               {message.content ? <CopyButton text={message.content} /> : null}
