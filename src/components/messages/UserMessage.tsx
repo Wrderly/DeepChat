@@ -2,14 +2,12 @@ import { useTranslate } from '../../i18n/index.js'
 import clsx from 'clsx'
 import { memo, useLayoutEffect, useRef, useState } from 'react'
 import { useIsMobile } from '../../app/viewport.js'
-import { IconEditOutline16 } from '../base/icons.js'
+import { IconBranchOutline16, IconEditOutline16 } from '../base/icons.js'
 import { getFileViewType, isImage } from '../../services/attachments.js'
-import { editMessage, retryUpload } from '../../services/chat/store.js'
-import { stopReadAloud } from '../../services/speech/readAloud.js'
+import { branchSession, retryUpload, updateUserMessage } from '../../services/chat/store.js'
 import type { UserMessage as UserMessageType } from '../../services/chat/types.js'
 import { Button } from '../base/Button.js'
 import { IconButton } from '../base/IconButton.js'
-import { ensureApiKey } from '../settings/settingsDialogState.js'
 import {
   BranchSwitcher,
   type MessageVersions,
@@ -54,9 +52,8 @@ export const UserMessage = memo(function UserMessage({
     }
   }, [editing, draft])
 
-  const sendEdit = () => {
-    if (canSend && ensureApiKey() && editMessage(sessionId, message.id, draft.trim())) {
-      stopReadAloud()
+  const saveEdit = () => {
+    if (canSend && updateUserMessage(sessionId, message.id, draft.trim())) {
       setEditing(false)
     }
   }
@@ -99,7 +96,7 @@ export const UserMessage = memo(function UserMessage({
                 setEditing(false)
               } else if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !isMobile) {
                 event.preventDefault()
-                sendEdit()
+                saveEdit()
               }
             }}
           />
@@ -107,8 +104,8 @@ export const UserMessage = memo(function UserMessage({
             <Button size="s" variant="outlined" onClick={() => setEditing(false)}>
               {t('cancel')}
             </Button>
-            <Button size="s" disabled={!canSend} onClick={sendEdit}>
-              {t('send')}
+            <Button size="s" disabled={!canSend} onClick={saveEdit}>
+              {t('save')}
             </Button>
           </div>
         </div>
@@ -127,6 +124,13 @@ export const UserMessage = memo(function UserMessage({
                   setDraft(message.content)
                   setEditing(true)
                 }}
+              />
+              <IconButton
+                icon={<IconBranchOutline16 />}
+                tooltip={t('branchToNewChat')}
+                tooltipPlacement="bottom"
+                disabled={busy}
+                onClick={() => branchSession(sessionId, message.id)}
               />
             </div>
             <BranchSwitcher versions={versions} disabled={busy} onSelect={onSelectVersion} />

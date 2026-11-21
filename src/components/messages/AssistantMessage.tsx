@@ -1,14 +1,27 @@
 import { useTranslate } from '../../i18n/index.js'
 import clsx from 'clsx'
-import { memo } from 'react'
-import { IconRefreshOutline16, IconWarningOutline16 } from '../base/icons.js'
+import { memo, useState } from 'react'
+import {
+  IconBranchOutline16,
+  IconEditOutline16,
+  IconEllipsisOutline16,
+  IconRefreshOutline16,
+  IconWarningOutline16,
+} from '../base/icons.js'
 import { describeReply } from '../../services/chat/describe.js'
 import { canContinueReply } from '../../services/chat/reply.js'
-import { continueReply, regenerateReply } from '../../services/chat/store.js'
+import {
+  branchSession,
+  continueReply,
+  editReplyText,
+  editReplyThinking,
+  regenerateReply,
+} from '../../services/chat/store.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import type { AssistantMessage as AssistantMessageType } from '../../services/chat/types.js'
 import { openSettings } from '../settings/settingsDialogState.js'
 import { IconButton } from '../base/IconButton.js'
+import { Menu, type MenuOption } from '../base/Menu.js'
 import { Button } from '../base/Button.js'
 import { Markdown } from '../markdown/Markdown.js'
 import { SiteThumbnails } from '../search/SiteLogo.js'
@@ -56,9 +69,53 @@ export const AssistantMessage = memo(function AssistantMessage({
   const copyText = responseText || notice?.text
   const waiting = streaming && view.steps.length === 0 && !view.answer && !message.thinking
   const summaryEntry = `${message.id}-summary`
+  const thinkingText = message.blocks
+    .filter((block) => block.type === 'thinking')
+    .map((block) => block.thinking)
+    .join('')
+  const [editing, setEditing] = useState<{ kind: 'thinking' | 'text'; draft: string } | null>(null)
+  const saveEdit = () => {
+    if (!editing) {
+      return
+    }
+    if (editing.kind === 'thinking') {
+      editReplyThinking(sessionId, message.id, editing.draft)
+    } else {
+      editReplyText(sessionId, message.id, editing.draft)
+    }
+    setEditing(null)
+  }
+  const menuOptions: MenuOption[] = [
+    ...(thinkingText.trim()
+      ? [
+          {
+            key: 'thinking',
+            label: t('editThinking'),
+            icon: <IconEditOutline16 />,
+            onSelect: () => setEditing({ kind: 'thinking', draft: thinkingText }),
+          },
+        ]
+      : []),
+    ...(answer
+      ? [
+          {
+            key: 'text',
+            label: t('editAnswer'),
+            icon: <IconEditOutline16 />,
+            onSelect: () => setEditing({ kind: 'text', draft: answer.text }),
+          },
+        ]
+      : []),
+    {
+      key: 'branch',
+      label: t('branchToNewChat'),
+      icon: <IconBranchOutline16 />,
+      onSelect: () => branchSession(sessionId, message.id),
+    },
+  ]
   return (
     <div className={styles.message}>
-      {refused ? null : (
+      {refused || editing?.kind === 'thinking' ? null : (
         <ReplyArea
           message={message}
           view={view}
@@ -66,7 +123,7 @@ export const AssistantMessage = memo(function AssistantMessage({
           hasResponse={!!responseText}
         />
       )}
-      {answer ? (
+      {answer && editing?.kind !== 'text' ? (
         <Markdown
           className="ds-assistant-message-main-content"
           content={answer.markdown}
@@ -138,6 +195,37 @@ export const AssistantMessage = memo(function AssistantMessage({
           </span>
         </div>
       ) : null}
+      {editing ? (
+        <div className={styles.editor}>
+          <textarea
+            className={styles.editorTextarea}
+            aria-label={t(editing.kind === 'thinking' ? 'editThinking' : 'editAnswer')}
+            autoFocus
+            value={editing.draft}
+            onChange={(event) => setEditing({ ...editing, draft: event.target.value })}
+            onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing) {
+                return
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                setEditing(null)
+              } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                event.preventDefault()
+                saveEdit()
+              }
+            }}
+          />
+          <div className={styles.editorActions}>
+            <Button size="s" variant="outlined" onClick={() => setEditing(null)}>
+              {t('cancel')}
+            </Button>
+            <Button size="s" disabled={!editing.draft.trim()} onClick={saveEdit}>
+              {t('save')}
+            </Button>
+          </div>
+        </div>
+      ) : null}
       {streaming ? null : (
         <div className={styles.bottom}>
           <BranchSwitcher versions={versions} disabled={busy} onSelect={onSelectVersion} />
@@ -156,6 +244,18 @@ export const AssistantMessage = memo(function AssistantMessage({
                 regenerateReply(sessionId, message.id)
               }}
             />
+            <Menu options={menuOptions}>
+              {({ open, toggle }) => (
+                <IconButton
+                  icon={<IconEllipsisOutline16 />}
+                  tooltip={open ? undefined : t('more')}
+                  aria-label={t('more')}
+                  tooltipPlacement="bottom"
+                  disabled={busy || refused}
+                  onClick={toggle}
+                />
+              )}
+            </Menu>
           </div>
           {isLast && canContinueReply(message) ? (
             <Button

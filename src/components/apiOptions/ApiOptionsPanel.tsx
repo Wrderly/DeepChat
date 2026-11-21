@@ -3,7 +3,6 @@ import { useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useAnchoredPosition, useDismiss } from '../base/anchored.js'
 import { useSettings } from '../../services/settings.js'
-import { SYSTEM_PROMPT } from '../../services/chat/store.js'
 import type { ApiOptions } from '../../services/api/options.js'
 import { useTranslate } from '../../i18n/index.js'
 import { ApiOptionsControls } from './ApiOptionsControls.js'
@@ -81,9 +80,6 @@ export const ApiOptionsPanel = ({
                     aria-label={t('apiOptionsSystemPrompt')}
                     onChange={(event) => onSystemPromptChange(event.target.value)}
                   />
-                  <p className={styles.hint}>
-                    {t('apiOptionsSystemPromptHint', { prompt: SYSTEM_PROMPT })}
-                  </p>
                 </div>
               </div>
               <ApiOptionsControls

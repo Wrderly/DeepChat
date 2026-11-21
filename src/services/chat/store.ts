@@ -34,8 +34,11 @@ import {
   type AssistantMessage,
   type FileAttachment,
   type Message,
+  type ReplyBlock,
   type Session,
   type SessionSummary,
+  type TextPart,
+  type ThinkingPart,
   type UserMessage,
 } from './types.js'
 
@@ -740,6 +743,160 @@ export const editMessage = (sessionId: string, messageId: string, content: strin
   persist(sessionId)
   void streamReply(sessionId, reply, { history: path.slice(0, index), question })
   return true
+}
+
+/**
+ * 就地修改提问内容：直接改写上下文里的这条提问，不新增版本、不重新请求。
+ * 后续对话保持不变，下一次请求会带上修改后的内容。
+ */
+export const updateUserMessage = (
+  sessionId: string,
+  messageId: string,
+  content: string
+): boolean => {
+  if (get().importingHistory || deletingSessions.has(sessionId) || getStreamController(sessionId)) {
+    return false
+  }
+  const session = getSession(sessionId)
+  if (!session) {
+    return false
+  }
+  const target = getVisibleMessages(session).find((message) => message.id === messageId)
+  const text = content.trim()
+  if (target?.role !== 'user' || (!text && target.files.length === 0)) {
+    return false
+  }
+  updateSession(sessionId, (current) => ({
+    ...current,
+    messages: current.messages.map((message) =>
+      message.id === messageId && message.role === 'user' ? { ...message, content: text } : message
+    ),
+    updatedAt: Date.now(),
+  }))
+  persist(sessionId)
+  return true
+}
+
+/** 同类型的多个块合并成一块：第一块承接编辑后的内容，其余同类块丢弃；没有同类块时返回 null。 */
+const mergeParts = (
+  blocks: ReplyBlock[],
+  type: 'thinking' | 'text',
+  value: string
+): ReplyBlock[] | null => {
+  const index = blocks.findIndex((block) => block.type === type)
+  if (index < 0) {
+    return null
+  }
+  const merged: ReplyBlock =
+    type === 'thinking'
+      ? { ...(blocks[index] as ThinkingPart), thinking: value, signature: undefined }
+      : { ...(blocks[index] as TextPart), text: value, citations: undefined }
+  return blocks.flatMap((block, position) => {
+    if (block.type !== type) {
+      return [block]
+    }
+    return position === index ? [merged] : []
+  })
+}
+
+const editReplyParts = (
+  sessionId: string,
+  messageId: string,
+  update: (reply: AssistantMessage) => AssistantMessage | null
+) => {
+  if (get().importingHistory || deletingSessions.has(sessionId) || getStreamController(sessionId)) {
+    return
+  }
+  const session = getSession(sessionId)
+  if (!session) {
+    return
+  }
+  const reply = getVisibleMessages(session).find((message) => message.id === messageId)
+  if (reply?.role !== 'assistant') {
+    return
+  }
+  const next = update(reply)
+  if (!next) {
+    return
+  }
+  updateReply(sessionId, next)
+  updateSession(sessionId, (current) => ({ ...current, updatedAt: Date.now() }))
+  persist(sessionId)
+}
+
+/** 编辑思考内容：多段思考合并成一段；签名随内容失效，编辑后不再作为续写前缀。 */
+export const editReplyThinking = (sessionId: string, messageId: string, thinking: string) => {
+  const text = thinking.trim()
+  if (!text) {
+    return
+  }
+  editReplyParts(sessionId, messageId, (reply) => {
+    const blocks = mergeParts(reply.blocks, 'thinking', text)
+    return blocks ? { ...reply, blocks, prefix: false } : null
+  })
+}
+
+/** 编辑回答内容：多段正文合并成一段，随内容失效的引用一并清除。 */
+export const editReplyText = (sessionId: string, messageId: string, text: string) => {
+  const content = text.trim()
+  if (!content) {
+    return
+  }
+  editReplyParts(sessionId, messageId, (reply) => {
+    const blocks = mergeParts(reply.blocks, 'text', content)
+    return blocks ? { ...reply, blocks } : null
+  })
+}
+
+/**
+ * 从指定消息分支出新会话：复制可见路径到这条消息，提问连同它这一轮的回答一起带走，
+ * 打开新会话即可接着聊。新会话沿用原会话的标题与设置，消息重新分配 id 并重建线性分支关系。
+ */
+export const branchSession = (sessionId: string, messageId: string): string | null => {
+  if (get().importingHistory || deletingSessions.has(sessionId) || getStreamController(sessionId)) {
+    return null
+  }
+  const session = getSession(sessionId)
+  if (!session) {
+    return null
+  }
+  const path = getVisibleMessages(session)
+  const index = path.findIndex((message) => message.id === messageId)
+  if (index < 0) {
+    return null
+  }
+  const end =
+    path[index].role === 'user' && path[index + 1]?.role === 'assistant' ? index + 1 : index
+  const source = path.slice(0, end + 1)
+  const ids = source.map(() => createId())
+  const messages: Message[] = source.map((message, position) => {
+    const id = ids[position]
+    const parentId = position === 0 ? null : ids[position - 1]
+    const child = position < ids.length - 1 ? { selectedChildId: ids[position + 1] } : {}
+    return message.role === 'assistant'
+      ? { ...message, id, parentId, blocks: [...message.blocks], ...child }
+      : { ...message, id, parentId, files: [...message.files], ...child }
+  })
+  const now = Date.now()
+  const branch: Session = {
+    id: createId(),
+    title: session.title,
+    createdAt: now,
+    updatedAt: now,
+    messages,
+    rootMessageId: ids[0] ?? null,
+    ...(session.options ? { options: session.options } : {}),
+    ...(session.systemPrompt ? { systemPrompt: session.systemPrompt } : {}),
+  }
+  touchSession(branch.id)
+  set((state) => ({
+    sessions: [toSessionSummary(branch), ...state.sessions],
+    sessionCache: { ...state.sessionCache, [branch.id]: branch },
+    activeId: branch.id,
+  }))
+  persist(branch.id)
+  trimSessionCache()
+  return branch.id
 }
 
 export const selectMessageVersion = (sessionId: string, messageId: string) => {
