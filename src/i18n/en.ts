@@ -14,7 +14,7 @@ export const en = {
     'Chats or attachments have not been saved locally. Retry before closing this page.',
   sessionDeleteFailed: 'Unable to delete this chat. Please try again.',
   settings: 'Settings',
-  appName: 'API usage demo',
+  appName: 'DeepSeek Chat',
   deleteSessionModalContentTitle: 'Delete chat?',
   deleteSessionWithFilesDescription:
     'This chat and its uploaded files will be permanently deleted and cannot be recovered. Delete this chat?',
@@ -180,9 +180,9 @@ export const en = {
   settingsLocaleEnUS: 'English',
   settingDialogAsideModelOptionLabel: 'Model parameters',
   settingsApiOptionsDescription:
-    'Defaults for new chats. Adjust them per chat from the Model parameters entry below the message box.',
-  apiOptionsTitle: 'Model parameters',
-  apiOptionsTooltip: 'Adjust thinking effort, temperature, and more',
+    'Defaults for new chats. Adjust them per chat from the Chat settings entry below the message box; the system prompt lives there too.',
+  apiOptionsTitle: 'Chat settings',
+  apiOptionsTooltip: 'Adjust the system prompt, thinking effort, and more',
   apiOptionsDefault: 'Default',
   apiOptionsUnset: 'Unset',
   apiOptionsEffort: 'Thinking effort',
@@ -205,10 +205,13 @@ export const en = {
   apiOptionsStopSequencesHint:
     'Generation stops when any line appears. One per line, up to 16 lines of at most 512 bytes each.',
   apiOptionsStopSequencesPlaceholder: 'One per line',
+  apiOptionsSystemPrompt: 'System prompt',
+  apiOptionsSystemPromptHint: 'Leave empty to use the built-in prompt: "{prompt}"',
+  apiOptionsSystemPromptPlaceholder: 'e.g. You are a meticulous code reviewer.',
   apiOptionsReset: 'Reset',
-  apiOptionsCustomized: 'This chat uses its own parameters.',
+  apiOptionsCustomized: 'This chat uses its own settings.',
   apiOptionsFollowDefaults: 'This chat follows the default parameters from settings.',
   apiOptionsDraftNote:
-    'The new chat starts with these parameters; you can still adjust them after the first message.',
+    'The new chat starts with these settings; you can still adjust them after the first message.',
   apiOptionsDraftFollowDefaults: 'The new chat follows the default parameters from settings.',
 } satisfies Record<keyof typeof zh, string>

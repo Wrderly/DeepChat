@@ -10,7 +10,13 @@ import {
 } from '../base/icons.js'
 import { setSearch, setThinking, useSettings } from '../../services/settings.js'
 import { useIsMobile } from '../../app/viewport.js'
-import { sendMessage, setSessionApiOptions, stopReply, useChatStore } from '../../services/chat/store.js'
+import {
+  sendMessage,
+  setSessionApiOptions,
+  setSessionSystemPrompt,
+  stopReply,
+  useChatStore,
+} from '../../services/chat/store.js'
 import type { ApiOptions } from '../../services/api/options.js'
 import {
   addDraftFiles,
@@ -60,9 +66,15 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
     const session = sessionId === null ? undefined : state.sessionCache[sessionId]
     return session ? session.options : undefined
   })
-  // 新会话在发出第一条消息前还没有会话对象，参数先留在本地，发送时交给新会话
+  const sessionSystemPrompt = useChatStore((state): string | undefined => {
+    const session = sessionId === null ? undefined : state.sessionCache[sessionId]
+    return session ? session.systemPrompt : undefined
+  })
+  // 新会话在发出第一条消息前还没有会话对象，设置先留在本地，发送时交给新会话
   const [draftOptions, setDraftOptions] = useState<ApiOptions | undefined>(undefined)
+  const [draftSystemPrompt, setDraftSystemPrompt] = useState<string | undefined>(undefined)
   const options = sessionId === null ? draftOptions : sessionOptions
+  const systemPrompt = sessionId === null ? draftSystemPrompt : sessionSystemPrompt
   const setOptions = (next: ApiOptions | undefined) => {
     if (sessionId === null) {
       setDraftOptions(next)
@@ -70,7 +82,15 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
     }
     setSessionApiOptions(sessionId, next)
   }
-  const optionsNote = options
+  const setSystemPrompt = (next: string) => {
+    if (sessionId === null) {
+      setDraftSystemPrompt(next.trim() ? next : undefined)
+      return
+    }
+    setSessionSystemPrompt(sessionId, next)
+  }
+  const sessionCustomized = options !== undefined || Boolean(systemPrompt)
+  const optionsNote = sessionCustomized
     ? sessionId === null
       ? t('apiOptionsDraftNote')
       : t('apiOptionsCustomized')
@@ -165,7 +185,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       return
     }
     // 文本与上传完成态由提交动作读取最新快照，不使用上一次渲染的草稿。
-    if (!ensureApiKey() || !sendMessage(sessionId, options)) {
+    if (!ensureApiKey() || !sendMessage(sessionId, options, systemPrompt)) {
       return
     }
     stopReadAloud()
@@ -250,7 +270,13 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               <span className={styles.toggleLabel}>{t('search')}</span>
             </button>
           </Tooltip>
-          <ApiOptionsPanel value={options} onChange={setOptions} note={optionsNote}>
+          <ApiOptionsPanel
+            value={options}
+            onChange={setOptions}
+            systemPrompt={systemPrompt}
+            onSystemPromptChange={setSystemPrompt}
+            note={optionsNote}
+          >
             {({ open, toggle, customized }) => {
               const button = (
                 <button

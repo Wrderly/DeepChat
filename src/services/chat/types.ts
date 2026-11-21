@@ -86,6 +86,8 @@ export type AssistantMessage = MessageBranch & {
   search?: boolean
   /** 本轮请求使用的生成参数快照，续写与重新生成各自独立；历史消息中缺省表示按默认值请求 */
   options?: ApiOptions
+  /** 本轮请求使用的系统提示词快照；缺省表示使用内置默认提示词 */
+  systemPrompt?: string
   /** 本轮请求的系统信息快照；各回答版本独立保存，续写沿用。历史消息中缺省的快照保持为空。 */
   latestReminder?: string
   /** 是否允许作为续写前缀；仍需满足回复状态与内容限制。 */
@@ -121,6 +123,8 @@ export type Session = {
   rootMessageId?: string | null
   /** 会话级生成参数；缺省时跟随设置页里的默认值 */
   options?: ApiOptions
+  /** 会话级系统提示词；缺省时使用内置默认提示词 */
+  systemPrompt?: string
 }
 
 /** 会话列表元数据；消息只在打开会话时加载。 */

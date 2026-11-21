@@ -42,7 +42,7 @@ import {
 /** deepseek-flash 同时支持深度思考与图片输入 */
 const MODEL: ChatModel = 'deepseek-flash'
 /** 所有生成请求统一携带的助手身份说明 */
-const SYSTEM_PROMPT = '该助手为DeepSeek，由深度求索公司创造。'
+export const SYSTEM_PROMPT = '该助手为DeepSeek，由深度求索公司创造。'
 /** 保留最近打开的详情；当前会话、生成中及尚未成功保存的会话不淘汰。 */
 const SESSION_CACHE_LIMIT = 5
 /** 安全审核固定开启，所有请求都走扩展模式 */
@@ -51,8 +51,8 @@ const SAFETY_CHECK = { level: 'high' } as const
 const FILE_RETRY_LIMIT = 2
 /** 退避基数，第 n 次重试等待 2^n 倍；连续失败达到上限就放弃，把原始报错展示出来 */
 const FILE_RETRY_BASE_DELAY = 1000
-/** 生成参数改动写入 IndexedDB 的合并延迟：拖动滑块只落盘最后一次 */
-const OPTIONS_SAVE_DELAY = 300
+/** 会话级设置改动写入 IndexedDB 的合并延迟：拖动滑块、逐字输入只落盘最后一次 */
+const SESSION_SAVE_DELAY = 300
 
 /** 阅读链接始终开启，智能搜索开关控制是否另行声明搜索工具（含边想边搜）。 */
 const serverTools = (search: boolean): CreateMessageRequest['tools'] => {
@@ -263,7 +263,9 @@ export const bindChatPersistence = () => {
 }
 
 /** 按当前开关创建回复：深度思考对应 thinking，智能搜索控制 deepseek_web_search，参数取会话覆盖值或设置页默认值。 */
-const createReply = (session?: Pick<Session, 'options'> | null): AssistantMessage => {
+const createReply = (
+  session?: Pick<Session, 'options' | 'systemPrompt'> | null
+): AssistantMessage => {
   const { thinking, search, apiOptions } = useSettings.getState()
   return {
     id: createId(),
@@ -273,6 +275,7 @@ const createReply = (session?: Pick<Session, 'options'> | null): AssistantMessag
     thinking,
     search,
     options: session?.options ?? apiOptions,
+    systemPrompt: session?.systemPrompt,
     prefix: true,
     status: 'pending',
     blocks: [],
@@ -551,8 +554,20 @@ const removeSessionData = async (id: string): Promise<boolean> => {
 
 export const stopReply = (sessionId: string) => getStreamController(sessionId)?.abort()
 
-/** 会话级生成参数的落盘定时器：滑块连续触发时只写最后一次 */
-const optionsSaveTimers = new Map<string, ReturnType<typeof setTimeout>>()
+/** 会话级设置的落盘定时器：滑块拖动、逐字输入时只写最后一次 */
+const sessionSaveTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+/** 合并短时间内的多次会话级设置改动，避免每敲一个字就写一次 IndexedDB */
+const scheduleSessionSave = (sessionId: string) => {
+  clearTimeout(sessionSaveTimers.get(sessionId))
+  sessionSaveTimers.set(
+    sessionId,
+    setTimeout(() => {
+      sessionSaveTimers.delete(sessionId)
+      persist(sessionId)
+    }, SESSION_SAVE_DELAY)
+  )
+}
 
 /** 会话级生成参数：覆盖设置页默认值，传 undefined 恢复跟随默认值；不改变会话的更新顺序 */
 export const setSessionApiOptions = (sessionId: string, options: ApiOptions | undefined) => {
@@ -566,22 +581,35 @@ export const setSessionApiOptions = (sessionId: string, options: ApiOptions | un
     }
     return next
   })
-  clearTimeout(optionsSaveTimers.get(sessionId))
-  optionsSaveTimers.set(
-    sessionId,
-    setTimeout(() => {
-      optionsSaveTimers.delete(sessionId)
-      persist(sessionId)
-    }, OPTIONS_SAVE_DELAY)
-  )
+  scheduleSessionSave(sessionId)
+}
+
+/** 会话级系统提示词：空白视为未设置，回到内置默认提示词；不改变会话的更新顺序 */
+export const setSessionSystemPrompt = (sessionId: string, prompt: string) => {
+  if (get().importingHistory || deletingSessions.has(sessionId) || !getSession(sessionId)) {
+    return
+  }
+  const trimmed = prompt.trim()
+  updateSession(sessionId, (session) => {
+    const next: Session = { ...session, systemPrompt: trimmed || undefined }
+    if (!trimmed) {
+      delete next.systemPrompt
+    }
+    return next
+  })
+  scheduleSessionSave(sessionId)
 }
 
 /**
  * 提交指定会话的最新草稿；null 表示新建会话。
- * options 只在新建会话时写入，作为该会话第一条消息的初始生成参数。
+ * options、systemPrompt 只在新建会话时写入，作为该会话第一条消息的初始设置。
  * 同步接收成功才清空草稿，附件原件由会话接管；保存失败仍通过保存入口重试。
  */
-export const sendMessage = (targetSessionId: string | null, options?: ApiOptions) => {
+export const sendMessage = (
+  targetSessionId: string | null,
+  options?: ApiOptions,
+  systemPrompt?: string
+) => {
   if (get().importingHistory || !get().ready) {
     return false
   }
@@ -607,6 +635,7 @@ export const sendMessage = (targetSessionId: string | null, options?: ApiOptions
       messages: [],
       rootMessageId: null,
       ...(options ? { options } : {}),
+      ...(systemPrompt ? { systemPrompt } : {}),
     }
     sessionId = session.id
     touchSession(session.id)
@@ -752,6 +781,7 @@ export const continueReply = (sessionId: string, messageId: string) => {
     thinking: previous.thinking ?? thinking,
     search: previous.search ?? search,
     options: previous.options ?? session.options ?? apiOptions,
+    systemPrompt: previous.systemPrompt ?? session.systemPrompt,
     status: 'pending',
     stopReason: undefined,
     stopDetails: undefined,
@@ -1056,7 +1086,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           useSettings.getState().apiKey ?? '',
           {
             model: initial.model ?? MODEL,
-            system: SYSTEM_PROMPT,
+            system: initial.systemPrompt ?? SYSTEM_PROMPT,
             messages,
             thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
             safety_check: SAFETY_CHECK,
