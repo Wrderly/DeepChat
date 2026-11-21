@@ -36,7 +36,7 @@ The output is written to `dist/`. Deploy it to a static web server or open `dist
 
 ## Features
 
-- Multiple conversations with automatic titles, renaming, and deletion; edit prompts, regenerate replies, and switch between message branches.
+- Multiple conversations with automatic titles, renaming, and deletion; edit a prompt or an assistant thinking/answer block in place, regenerate replies, switch between message branches, and branch any message into a new chat.
 - Streaming replies, deep thinking, smart search, link reading, and source citations; stop generation or continue eligible replies.
 - Per-conversation generation parameters (thinking effort, temperature, Top P, max output, stop sequences): Settings → Model parameters holds the defaults for new chats, and the Chat settings entry in the input area overrides or resets them for one conversation; the new-chat page accepts them before the first message.
 - Per-conversation system prompt: the Chat settings entry also replaces the built-in prompt for one conversation; empty means the default prompt.
