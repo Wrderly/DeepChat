@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 与网页端品牌色保持一致（src/app/theme.css 里的 blue-500）。 -->
+    <color name="colorPrimary">#3964FE</color>
+    <color name="colorPrimaryDark">#2B49C4</color>
+    <color name="colorAccent">#3964FE</color>
+</resources>

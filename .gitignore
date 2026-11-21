@@ -9,3 +9,8 @@ build/
 .env.*
 !.env.example
 tmp/
+
+# 安卓签名材料（不要提交）
+android/keystore.properties
+android/app/*.jks
+android/app/*.keystore

@@ -75,9 +75,30 @@ src/
     api/               API requests, SSE, and protocol types
     chat/              Conversations, message branches, storage, and history import/export
     markdown/          Markdown parsing, syntax highlighting, and diagrams
+    platform/          Native shell glue (back button, file sharing)
     speech/            Audio recording and read-aloud playback
   utils/               Shared utilities
 ```
+
+## Android app
+
+The repo ships a [Capacitor](capacitor.config.ts) shell (`android/`) plus GitHub Actions workflows that produce a sideloadable APK.
+
+```bash
+pnpm build                 # build the web bundle into dist/
+pnpm android:sync          # copy it into android/app/src/main/assets
+cd android && ./gradlew assembleRelease
+```
+
+Pushing to `main` runs [android.yml](.github/workflows/android.yml), which builds the APK and uploads it as an artifact; pushing a `v*` tag also attaches it to a GitHub Release for direct download.
+
+Signing:
+
+1. Run [keystore.yml](.github/workflows/keystore.yml) once (Actions → Generate Android keystore → Run workflow) and download the produced `keystore.base64.txt`.
+2. Add the secrets `ANDROID_KEYSTORE_BASE64` (the whole file), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`.
+3. Without those secrets the build falls back to debug signing (test-only). Changing signatures means old installs can no longer be upgraded in place, and a lost key means uninstall/reinstall.
+
+The version comes from `version` in `package.json`; `versionCode` is derived from semver (`0.1.3` → `103`), so bump the version before shipping an update. Native tweaks: the back button closes overlays before exiting, ZIP export goes through the system share sheet, and `viewport-fit=cover` plus the microphone permission are in place.
 
 ## License
 

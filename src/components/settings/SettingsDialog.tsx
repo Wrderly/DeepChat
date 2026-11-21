@@ -19,6 +19,7 @@ import {
 import { useIsMobile } from '../../app/viewport.js'
 import { useChatStore } from '../../services/chat/store.js'
 import { regionCodes, getRegionName, provinces } from '../../services/location.js'
+import { shareFile } from '../../services/platform/shareFile.js'
 import {
   isChineseBrowser,
   setApiOptions,
@@ -551,6 +552,10 @@ const ExportHistory = ({ disabled }: { disabled: boolean }) => {
     setStatus(null)
     try {
       const { name, blob } = await exportHistory()
+      // 原生壳里 blob 下载不会触发，改走「写入缓存 + 系统分享」。
+      if (await shareFile(blob, name)) {
+        return
+      }
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url

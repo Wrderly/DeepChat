@@ -75,9 +75,30 @@ src/
     api/               API 请求、SSE 与协议类型
     chat/              会话、消息分支、本地存储与历史导入导出
     markdown/          Markdown 解析、代码高亮与图表
+    platform/          原生壳适配（返回键、文件分享）
     speech/            录音与朗读
   utils/               通用工具
 ```
+
+## 安卓应用
+
+仓库带一套 [Capacitor](capacitor.config.ts) 壳（`android/`）与 GitHub Actions 构建流程，产物是可直接侧载的 APK。
+
+```bash
+pnpm build                 # 构建网页产物到 dist/
+pnpm android:sync          # 复制到 android/app/src/main/assets
+cd android && ./gradlew assembleRelease
+```
+
+推送 `main` 时 [android.yml](.github/workflows/android.yml) 会自动构建 APK 并作为 artifact 上传；打 `v*` 标签时会额外挂到 GitHub Release 上，方便直接下载安装。
+
+签名说明：
+
+1. 运行一次 [keystore.yml](.github/workflows/keystore.yml)（Actions → Generate Android keystore → Run workflow），下载生成的 `keystore.base64.txt`。
+2. 在仓库 Secrets 里填 `ANDROID_KEYSTORE_BASE64`（上面文件的全文）、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。
+3. 没有配置时构建会回退 debug 签名，只能自测；换签名后旧包无法覆盖安装，密钥丢失也只能卸载重装。
+
+版本号取自 `package.json` 的 `version`，`versionCode` 由 semver 推导（`0.1.3` → `103`），升级前先改版本号再打包。安卓端额外做了几处适配：返回键先关浮层再退出、导出 ZIP 走系统分享面板、补齐 `viewport-fit=cover` 与麦克风权限。
 
 ## 许可证
 
