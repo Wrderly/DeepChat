@@ -198,12 +198,32 @@
   bottom: 0;
   left: 0;
   z-index: 800;
+  touch-action: pan-y;
+  transform: translateX(-100%);
+  transition: transform 220ms var(--ds-ease-in-out);
+}
+
+.drawerVisible {
+  transform: translateX(0);
 }
 
 .drawerMask {
   position: absolute;
   inset: 0;
   z-index: 799;
+  opacity: 0;
+  transition: opacity 220ms var(--ds-ease-in-out);
+}
+
+.drawerMaskVisible {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer,
+  .drawerMask {
+    transition: none;
+  }
 }
 
 .mobile {

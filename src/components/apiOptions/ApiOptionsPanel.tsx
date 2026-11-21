@@ -2,7 +2,10 @@ import clsx from 'clsx'
 import { useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useAnchoredPosition, useDismiss } from '../base/anchored.js'
+import { useDragDismiss } from '../base/dragDismiss.js'
+import { usePresence } from '../base/presence.js'
 import { useSettings } from '../../services/settings.js'
+import { useIsMobile } from '../../app/viewport.js'
 import type { ApiOptions } from '../../services/api/options.js'
 import { useTranslate } from '../../i18n/index.js'
 import { ApiOptionsControls } from './ApiOptionsControls.js'
@@ -34,13 +37,16 @@ export const ApiOptionsPanel = ({
 }) => {
   const t = useTranslate()
   const [open, setOpen] = useState(false)
+  const isMobile = useIsMobile()
   const defaults = useSettings((state) => state.apiOptions)
   const thinking = useSettings((state) => state.thinking)
+  const { mounted, closing } = usePresence(open, 140)
   const { anchorRef, floatingRef, position } = useAnchoredPosition<HTMLSpanElement, HTMLDivElement>(
-    open,
+    mounted,
     { side: 'top', align: 'start', offset: 8, maxHeight: 560 }
   )
   useDismiss(open, [anchorRef, floatingRef], () => setOpen(false), { captureEscape: true })
+  const drag = useDragDismiss({ direction: 'down', onDismiss: () => setOpen(false) })
   const customized = value !== undefined || Boolean(systemPrompt)
   const reset = () => {
     onChange(undefined)
@@ -51,16 +57,20 @@ export const ApiOptionsPanel = ({
       <span ref={anchorRef} className={styles.anchor}>
         {children({ open, toggle: () => setOpen((current) => !current), customized })}
       </span>
-      {open
+      {mounted
         ? createPortal(
             <div
               ref={floatingRef}
-              className={styles.panel}
-              style={position ?? undefined}
+              className={clsx(
+                styles.panel,
+                open && !closing && styles.panelVisible,
+                drag.dragging && styles.panelDragging
+              )}
+              style={{ ...position, ...(isMobile ? drag.style : undefined) }}
               role="dialog"
               aria-label={t('apiOptionsTitle')}
             >
-              <div className={styles.panelHead}>
+              <div className={styles.panelHead} {...(isMobile ? drag.handlers : undefined)}>
                 <span className={styles.panelTitle}>{t('apiOptionsTitle')}</span>
                 {customized ? (
                   <button type="button" className={styles.linkButton} onClick={reset}>

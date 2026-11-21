@@ -8,10 +8,16 @@
   justify-content: center;
   background-color: rgba(0, 0, 0, var(--overlay-opacity));
   backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 160ms var(--ds-ease-in-out);
 
   [data-ds-dark-theme] & {
     --overlay-opacity: 0.6;
   }
+}
+
+.overlayVisible {
+  opacity: 1;
 }
 
 .content {
@@ -31,6 +37,17 @@
     0 0 1px 0 rgba(0, 0, 0, 0.2),
     0 0 4px 0 rgba(0, 0, 0, 0.02),
     0 12px 32px 0 rgba(0, 0, 0, 0.08);
+  transform: translateY(6px) scale(0.985);
+  transition: transform 180ms var(--ds-ease-in-out);
+}
+
+.contentVisible {
+  transform: none;
+}
+
+/* 拖动时跟随手指，不做过渡 */
+.contentDragging {
+  transition: none;
 }
 
 .header {
@@ -65,4 +82,11 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .content {
+    transition: none;
+  }
 }

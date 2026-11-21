@@ -1,8 +1,8 @@
-# DeepSeek Chat
+# DeepChat
 
 English | [简体中文](README.zh-CN.md)
 
-A local-first DeepSeek chat client for the web. The browser talks to the DeepSeek API directly, so no server of your own is needed, and the same frontend packages into an Android app.
+A local-first web chat client: chats and attachments stay on your device, and the browser calls the model API directly, so no server of your own is needed. The same frontend packages into an Android app.
 
 ## Getting started
 

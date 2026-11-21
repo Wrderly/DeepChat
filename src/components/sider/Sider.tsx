@@ -7,8 +7,10 @@ import { groupSessions } from '../../services/chat/sessionGroups.js'
 import { newChat, removeSession, useChatStore } from '../../services/chat/store.js'
 import type { SessionSummary } from '../../services/chat/types.js'
 import { Button } from '../base/Button.js'
+import { useDragDismiss } from '../base/dragDismiss.js'
 import { IconButton } from '../base/IconButton.js'
 import { Modal } from '../base/Modal.js'
+import { usePresence } from '../base/presence.js'
 import { showToast } from '../base/toastState.js'
 import { openSettings } from '../settings/settingsDialogState.js'
 import { closeMobileSider, useMobileSider } from './mobileSiderState.js'
@@ -140,9 +142,11 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
   )
 }
 
-/** 移动端抽屉：浮在页面上方，点空白区域或按 Esc 关闭。 */
+/** 移动端抽屉：浮在页面上方，点空白区域、按 Esc 或向左滑动关闭。 */
 export const MobileSider = () => {
   const open = useMobileSider((state) => state.open)
+  const { mounted, closing } = usePresence(open)
+  const drag = useDragDismiss({ direction: 'left', onDismiss: closeMobileSider, threshold: 64 })
 
   useEffect(() => {
     if (!open) {
@@ -157,13 +161,22 @@ export const MobileSider = () => {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [open])
 
-  if (!open) {
+  if (!mounted) {
     return null
   }
+  const expanded = open && !closing
   return (
     <>
-      <div className={styles.drawerMask} onClick={closeMobileSider} />
-      <div className={styles.drawer} data-overlay="drawer">
+      <div
+        className={clsx(styles.drawerMask, expanded && styles.drawerMaskVisible)}
+        onClick={closeMobileSider}
+      />
+      <div
+        className={clsx(styles.drawer, expanded && styles.drawerVisible)}
+        style={drag.style}
+        data-overlay="drawer"
+        {...drag.handlers}
+      >
         <Sider mobile />
       </div>
     </>

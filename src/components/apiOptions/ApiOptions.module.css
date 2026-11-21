@@ -21,6 +21,20 @@
     0 0 1px rgba(0, 0, 0, 0.2),
     0 0 4px rgba(0, 0, 0, 0.02),
     0 12px 32px rgba(0, 0, 0, 0.08);
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 140ms var(--ds-ease-in-out),
+    transform 160ms var(--ds-ease-in-out);
+}
+
+.panelVisible {
+  opacity: 1;
+  transform: none;
+}
+
+.panelDragging {
+  transition: none;
 }
 
 .panelHead {
@@ -28,6 +42,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  touch-action: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    transition: none;
+  }
 }
 
 .panelTitle {
