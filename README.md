@@ -2,104 +2,117 @@
 
 English | [简体中文](README.zh-CN.md)
 
-A static chat demo powered by the DeepSeek API. No application backend is required: the browser connects directly to the configured API service.
-
-You can [try the app online](https://deepseek-ai.github.io/chat-demo/) or download the archive from [Releases](https://github.com/deepseek-ai/deepseek-chat-demo/releases), extract it, and double-click `index.html` to use it locally without installation or a build. Enter your API key in Settings before your first chat.
+A local-first DeepSeek chat client for the web. The browser talks to the DeepSeek API directly, so no server of your own is needed, and the same frontend packages into an Android app.
 
 ## Getting started
 
-Install Node.js 22.12+ and pnpm, then run:
+Requires Node.js 22 or newer and pnpm:
 
 ```sh
-git clone https://github.com/deepseek-ai/chat-demo.git
-cd chat-demo
+git clone https://github.com/Wrderly/DeepSeekChat.git
+cd DeepSeekChat
 pnpm install
 pnpm dev
 ```
 
-Open http://localhost:8090.
+Open http://localhost:8090 and add your API Key under Settings → Data to start chatting.
 
-On Windows you can also double-click `start.bat` in the repository root for a one-click start: it checks Node.js and pnpm, installs dependencies when needed, starts the development server, and opens the browser once the server is ready. If the default port 8090 is taken, the next free port is used.
-
-```powershell
-# Optional: starting port (-Port), start without opening the browser (-NoBrowser)
-powershell -NoProfile -ExecutionPolicy Bypass -File .\start.ps1 -Port 9000 -NoBrowser
-```
-
-To build the static site:
+Build the static bundle:
 
 ```sh
 pnpm build
 ```
 
-The output is written to `dist/`. Deploy it to a static web server or open `dist/index.html` directly. Opening the file directly requires browser support for storage on `file://` pages and an API service that permits their cross-origin requests.
+The output lives in `dist/`, ready for any static host or for the Android shell.
 
 ## Features
 
-- Multiple conversations with automatic titles, renaming, and deletion; edit a prompt or an assistant thinking/answer block in place, regenerate replies, switch between message branches, and branch any message into a new chat.
-- Streaming replies, deep thinking, smart search, link reading, and source citations; stop generation or continue eligible replies.
-- Per-conversation generation parameters (thinking effort, temperature, Top P, max output, stop sequences): Settings → Model parameters holds the defaults for new chats, and the Chat settings entry in the input area overrides or resets them for one conversation; the new-chat page accepts them before the first message.
-- Per-conversation system prompt: the Chat settings entry also replaces the built-in prompt for one conversation; empty means the default prompt.
-- Upload, paste, or drag and drop attachments; use voice input and read replies aloud. A live audio spectrum appears in the first row of the input area while recording on mobile.
-- Markdown, syntax highlighting, KaTeX math, and Mermaid diagrams.
-- Simplified Chinese and English, light and dark themes, mobile layouts, location settings, and chat history import and export.
+- **Chats**: create chats, auto-title them from the first question, rename and delete; switch between message branches; branch a new chat from any message, carrying that question and answer along.
+- **Message editing**: edit a question in place, or edit the assistant's thinking and answer, with changes written into the context immediately. Question, thinking and answer editors have distinct looks and share the same Cancel / Save actions.
+- **Conversation**: streaming replies, deep thinking, smart search, link reading with source citations; stop a reply at any time and continue it when eligible.
+- **Generation parameters**: thinking effort, temperature, top P, max output and stop sequences. Settings → Model parameters stores defaults for new chats; the Session settings entry at the bottom of the composer overrides or resets them per chat; a new chat can preset them before the first message.
+- **System prompt**: set per chat; the built-in prompt applies when the field is empty.
+- **Input**: multi-line composer (Enter sends, Shift+Enter adds a line), attachments by upload / paste / drag, voice input, and read-aloud replies.
+- **Rendering**: Markdown, syntax highlighting, KaTeX math, Mermaid diagrams and source citation cards.
+- **Interface**: Simplified Chinese and English, light / dark / follow-system themes, mobile layout and a collapsible sidebar; mobile recording shows a live spectrum on the composer's first line.
+- **Data management**: import and export history (ZIP), delete all chats.
+- **Context hints**: every request carries the current date, weekday, region, platform and language.
+
+## Settings
+
+| Setting | Purpose |
+| --- | --- |
+| API Key | Stored locally; used for chat, files, speech and read-aloud requests |
+| Language | Simplified Chinese or English |
+| Theme | Light, dark, or follow the system |
+| Location | Region info used for the in-conversation context hint |
+| Read-aloud voice | Voice used when reading replies |
+| Model parameters | Default thinking effort, temperature, top P, max output and stop sequences for new chats |
 
 ## Data and storage
 
-Your API key and settings are stored in the browser's localStorage. Conversations and original attachments are stored in IndexedDB. Local data is isolated by browser profile and site origin. Sending messages, uploading attachments, and using speech features sends the relevant content to the configured API service.
+The API Key and settings live in localStorage (keys prefixed `deepseek-chat:`), while chats and attachment originals live in IndexedDB (database `deepseek-chat`). Local data is scoped to the browser profile and site origin. Sending a message, uploading attachments, voice input and read-aloud send the corresponding content to the configured API service.
 
-History import and export in Settings use ZIP archives. After confirmation and successful validation, importing replaces all local conversations and attachments. Exports include conversations and locally available original images, but exclude API keys, settings, and original non-image attachments. See the [history import/export documentation (Chinese)](src/services/chat/history/README.md) for the archive format and preservation details.
+History import and export use ZIP; the format is documented in [history import and export](src/services/chat/history/README.md). Exports contain all chats plus available image originals; an import replaces local chats and attachments once validation passes.
 
-Settings → Data → Delete all chats clears all local conversations, original attachments, and unsent drafts after confirmation. It stops ongoing replies and returns to a new chat. Your API key and settings are preserved; files already uploaded to the API service are not deleted.
+Settings → Data → Delete all chats clears every local chat, attachment original and unsent draft, and stops any reply in progress.
 
 ## Development
 
-| Command       | Description                  |
-| ------------- | ---------------------------- |
-| `pnpm dev`    | Start the development server |
-| `pnpm build`  | Build into `dist/`           |
-| `pnpm type`   | Run TypeScript type checks   |
-| `pnpm lint`   | Lint with oxlint             |
-| `pnpm format` | Format with oxfmt            |
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Start the dev server |
+| `pnpm build` | Build into `dist/` |
+| `pnpm type` | TypeScript type check |
+| `pnpm lint` | oxlint check |
+| `pnpm format` | oxfmt formatting |
+| `pnpm android:sync` | Sync the web build into the Android project |
 
-[rspack.config.ts](rspack.config.ts) uses `https://api.deepseek.com` by default. Use `createConfig({ apiOrigin, devServer })` to customize the API origin and development server proxy.
+[rspack.config.ts](rspack.config.ts) points at `https://api.deepseek.com` by default; `createConfig({ apiOrigin, devServer })` accepts a custom API origin and dev-server proxy.
 
-Chat uses `deepseek-flash` by default through Anthropic-compatible Messages / Files APIs. Speech features use ASR / TTS endpoints. Requests include extensions for search, link reading, titles, and `latest_reminder`, so the configured service must support the corresponding capabilities. Supported attachment formats are determined by server-side validation.
+Chat defaults to `deepseek-flash` and talks over the Anthropic-compatible Messages / Files API, with speech on the ASR / TTS endpoints. Requests use extensions such as search, link reading, title and `latest_reminder`. Attachment formats follow server-side validation.
 
 ```text
 src/
-  app/                 Application layout, themes, and global styles
-  components/          Chat, settings, Markdown, and other UI components
-  i18n/                English and Chinese translations
+  app/                  app shell, theme and global styles
+  components/           chat, settings and Markdown UI
+  i18n/                 Chinese and English copy
   services/
-    api/               API requests, SSE, and protocol types
-    chat/              Conversations, message branches, storage, and history import/export
-    markdown/          Markdown parsing, syntax highlighting, and diagrams
-    platform/          Native shell glue (back button, file sharing)
-    speech/            Audio recording and read-aloud playback
-  utils/               Shared utilities
+    api/                API requests, SSE and protocol types
+    chat/               chats, message branches, local storage, history import/export
+    markdown/           Markdown parsing, highlighting and diagrams
+    platform/           native shell adapters (back button, file sharing)
+    speech/             recording and read-aloud
+  utils/                shared utilities
+android/               Capacitor Android project
 ```
 
 ## Android app
 
-The repo ships a [Capacitor](capacitor.config.ts) shell (`android/`) plus GitHub Actions workflows that produce a sideloadable APK.
+The repo ships a [Capacitor](capacitor.config.ts) shell (`android/`) plus a GitHub Actions pipeline that produces a sideloadable APK.
 
-```bash
+```sh
 pnpm build                 # build the web bundle into dist/
 pnpm android:sync          # copy it into android/app/src/main/assets
 cd android && ./gradlew assembleRelease
 ```
 
-Pushing to `main` runs [android.yml](.github/workflows/android.yml), which builds the APK and uploads it as an artifact; pushing a `v*` tag also attaches it to a GitHub Release for direct download.
+A push to `main` makes [android.yml](.github/workflows/android.yml) build the APK and upload it as an artifact; pushing a `v*` tag also attaches it to a GitHub Release.
 
-Signing:
+### Signing
 
-1. Run [keystore.yml](.github/workflows/keystore.yml) once (Actions → Generate Android keystore → Run workflow) and download the produced `keystore.base64.txt`.
-2. Add the secrets `ANDROID_KEYSTORE_BASE64` (the whole file), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`.
-3. Without those secrets the build falls back to debug signing (test-only). Changing signatures means old installs can no longer be upgraded in place, and a lost key means uninstall/reinstall.
+1. Run [keystore.yml](.github/workflows/keystore.yml) once: Actions → Generate Android keystore → Run workflow, choose an alias and password, then download the generated `keystore.base64.txt`.
+2. Add four repository secrets: `ANDROID_KEYSTORE_BASE64` (the full file), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`.
+3. Every later build is signed with that key, so installed versions upgrade in place. Back up the key and password — they decide whether future versions can install over older ones.
 
-The version comes from `version` in `package.json`; `versionCode` is derived from semver (`0.1.3` → `103`), so bump the version before shipping an update. Native tweaks: the back button closes overlays before exiting, ZIP export goes through the system share sheet, and `viewport-fit=cover` plus the microphone permission are in place.
+### Versioning
+
+The version comes from `version` in `package.json`, and `versionCode` is derived from semver (`0.1.3` → `103`). Bump `version` before packaging a release.
+
+### Android behaviour
+
+The back button steps out gradually (closes overlays and the sidebar drawer, then walks history, then exits), ZIP exports open the system share sheet, voice input has the microphone permission it needs, and the layout respects full-screen insets.
 
 ## License
 
-[MIT](LICENSE). The build copies the license to `dist/LICENSE`; include it when distributing the app. Third-party dependencies are subject to their own licenses.
+[MIT](LICENSE). The build copies the license to `dist/LICENSE`; keep it when redistributing. Third-party dependencies keep their own licenses.
