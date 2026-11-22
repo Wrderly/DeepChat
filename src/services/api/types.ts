@@ -4,8 +4,6 @@
  * 声明 deepseek_web_search / deepseek_read_url 或设置 safety_check.level 为 high 时进入扩展模式。
  */
 
-export type ChatModel = 'deepseek-flash' | 'deepseek-v4-pro'
-
 // ---------- 响应：内容块 ----------
 
 /** 正文引用：服务端把模型的引用标记还原为来源，挂在对应文本块上 */
@@ -126,12 +124,16 @@ export type ToolUseBlock = { type: 'tool_use'; id: string; name: string; input: 
 export type TextBlockParam = { type: 'text'; text: string }
 
 /**
- * 文件块：引用经 Files API 上传的文件，图片用 image、其余用 document；
- * 图片请求需带 anthropic-beta: files-api-2025-04-14；扩展模式不支持 document，返回 400。
+ * 文件块：DeepSeek 用 file_id 引用经 Files API 上传的文件，图片用 image、其余用 document；
+ * 其他提供商直接把图片以 base64 内联，不需要上传。
  */
+export type FileSource =
+  | { type: 'file'; file_id: string }
+  | { type: 'base64'; media_type: string; data: string }
+
 export type FileBlockParam = {
   type: 'image' | 'document'
-  source: { type: 'file'; file_id: string }
+  source: FileSource
 }
 
 /** 接口接受的调用块；历史只回传 kind 为 read_link 的调用 */
@@ -186,9 +188,9 @@ export type ThinkingEffort =
   | 'ultra'
   | 'max'
 
-/** 安全审核固定开启，所有请求都走扩展模式。 */
+/** 安全审核固定开启，所有请求都走扩展模式；自定义提供商不发送这些私有字段。 */
 export type CreateMessageRequest = {
-  model: ChatModel
+  model: string
   system: string
   messages: MessageParam[]
   thinking: { type: 'enabled' | 'disabled' }
@@ -202,8 +204,11 @@ export type CreateMessageRequest = {
   max_tokens?: number
   /** 命中任一条即停止生成，最多 16 条，每条不超过 512 字节 */
   stop_sequences?: string[]
-  tools: (DeepseekWebSearchTool | DeepseekReadUrlTool)[]
-  safety_check: { level: 'high' }
+  /** DeepSeek 扩展：联网搜索与链接读取工具 */
+  tools?: (DeepseekWebSearchTool | DeepseekReadUrlTool)[]
+  /** DeepSeek 扩展：安全审核级别 */
+  safety_check?: { level: 'high' }
+  /** DeepSeek 扩展：由服务端生成会话标题 */
   title?: { enabled: boolean }
 }
 

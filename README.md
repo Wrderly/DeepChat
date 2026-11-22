@@ -15,7 +15,7 @@ pnpm install
 pnpm dev
 ```
 
-Open http://localhost:8090 and add your API Key under Settings → Data to start chatting.
+Open http://localhost:8090 and add a provider and its API Key under Settings → Model services to start chatting. The built-in DeepSeek provider only needs a key; custom providers can use the Anthropic or OpenAI protocol.
 
 Build the static bundle:
 
@@ -29,7 +29,8 @@ The output lives in `dist/`, ready for any static host or for the Android shell.
 
 - **Chats**: create chats, auto-title them from the first question, rename and delete; switch between message branches; branch a new chat from any message, carrying that question and answer along.
 - **Message editing**: edit a question in place, or edit the assistant's thinking and answer, with changes written into the context immediately. Question, thinking and answer editors have distinct looks and share the same Cancel / Save actions.
-- **Conversation**: streaming replies, deep thinking, smart search, link reading with source citations; stop a reply at any time and continue it when eligible.
+- **Model providers**: pick the model for each chat from the composer; add any number of Anthropic- or OpenAI-compatible providers with their own name, API base URL, path, key, extra headers / body and model list. The built-in DeepSeek provider is always present and cannot be deleted, and can fetch its model list from the service.
+- **Conversation**: streaming replies, deep thinking, smart search, link reading with source citations; stop a reply at any time and continue it when eligible. Deep thinking follows the selected model's capabilities; smart search, link reading, speech and read-aloud are provided by the built-in DeepSeek provider.
 - **Generation parameters**: thinking effort, temperature, top P, max output and stop sequences. Settings → Model parameters stores defaults for new chats; the Session settings entry at the bottom of the composer overrides or resets them per chat; a new chat can preset them before the first message.
 - **System prompt**: set per chat; the built-in prompt applies when the field is empty.
 - **Input**: multi-line composer (Enter sends, Shift+Enter adds a line), attachments by upload / paste / drag, voice input, and read-aloud replies.
@@ -42,7 +43,7 @@ The output lives in `dist/`, ready for any static host or for the Android shell.
 
 | Setting | Purpose |
 | --- | --- |
-| API Key | Stored locally; used for chat, files, speech and read-aloud requests |
+| Model services | Providers, API Keys and model lists; the built-in DeepSeek provider is always present |
 | Language | Simplified Chinese or English |
 | Theme | Light, dark, or follow the system |
 | Location | Region info used for the in-conversation context hint |
@@ -51,7 +52,7 @@ The output lives in `dist/`, ready for any static host or for the Android shell.
 
 ## Data and storage
 
-The API Key and settings live in localStorage (keys prefixed `deepseek-chat:`), while chats and attachment originals live in IndexedDB (database `deepseek-chat`). Local data is scoped to the browser profile and site origin. Sending a message, uploading attachments, voice input and read-aloud send the corresponding content to the configured API service.
+Provider API Keys and settings live in localStorage (keys prefixed `deepchat:`, including the provider list under `deepchat:providers`), while chats and attachment originals live in IndexedDB (database `deepchat`). Local data is scoped to the browser profile and site origin. Sending a message, uploading attachments, voice input and read-aloud send the corresponding content to the configured API service; requests go directly from the browser to each provider's base URL.
 
 History import and export use ZIP; the format is documented in [history import and export](src/services/chat/history/README.md). Exports contain all chats plus available image originals; an import replaces local chats and attachments once validation passes.
 
@@ -70,7 +71,7 @@ Settings → Data → Delete all chats clears every local chat, attachment origi
 
 [rspack.config.ts](rspack.config.ts) points at `https://api.deepseek.com` by default; `createConfig({ apiOrigin, devServer })` accepts a custom API origin and dev-server proxy.
 
-Chat defaults to `deepseek-flash` and talks over the Anthropic-compatible Messages / Files API, with speech on the ASR / TTS endpoints. Requests use extensions such as search, link reading, title and `latest_reminder`. Attachment formats follow server-side validation.
+The built-in DeepSeek provider talks over the Anthropic-compatible Messages / Files API, with speech on the ASR / TTS endpoints and extensions such as search, link reading, title and `latest_reminder`. Custom providers speak either the Anthropic Messages API or the OpenAI Chat Completions API; images are inlined as base64 because the Files API is DeepSeek-only, and unsupported extensions are dropped. Attachment formats follow server-side validation.
 
 ```text
 src/
@@ -80,6 +81,7 @@ src/
   services/
     api/                API requests, SSE and protocol types
     chat/               chats, message branches, local storage, history import/export
+    providers/          provider definitions, storage and model resolution
     markdown/           Markdown parsing, highlighting and diagrams
     platform/           native shell adapters (back button, file sharing)
     speech/             recording and read-aloud

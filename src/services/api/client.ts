@@ -1,21 +1,13 @@
 import { translate, type TranslationMessage } from '../../i18n/index.js'
 import { resizeUploadImage } from '../../utils/resizeUploadImage.js'
-import { readMessageEvent } from './parseEvent.js'
-import { readServerSentEvents } from './sse.js'
-import type {
-  ApiErrorBody,
-  CreateMessageRequest,
-  FileObject,
-  FilePurpose,
-  MessageStreamEvent,
-} from './types.js'
+import type { FileObject, FilePurpose } from './types.js'
 
 /** 构建期 API 地址，默认 https://api.deepseek.com；本地开发支持开发服务器代理 */
 export const API_ORIGIN = __API_ORIGIN__
-/** Anthropic 兼容接口的前缀 */
+/** DeepSeek 的 Anthropic 兼容接口前缀；Files API 只在内置提供商下使用 */
 const ANTHROPIC_BASE_URL = `${API_ORIGIN}/anthropic/v1`
 /** 引用 Files API 上传的图片、调用 Anthropic 兼容 Files API 时必须携带 */
-const FILES_BETA = 'files-api-2025-04-14'
+export const FILES_BETA = 'files-api-2025-04-14'
 
 export type ApiErrorKind =
   /** 非 2xx 响应 */
@@ -43,13 +35,13 @@ export class ApiError extends Error {
   }
 }
 
-const isErrorBody = (value: unknown): value is ApiErrorBody =>
+const isErrorBody = (value: unknown): value is { error: { message: string } } =>
   typeof value === 'object' &&
   value !== null &&
   'error' in value &&
-  typeof (value as ApiErrorBody).error?.message === 'string'
+  typeof (value as { error?: { message?: unknown } }).error?.message === 'string'
 
-const readErrorResponse = async (
+export const readErrorResponse = async (
   response: Response,
   kind: 'http' | 'protocol' = 'http',
   fallback = response.statusText
@@ -90,7 +82,7 @@ const anthropicHeaders = (apiKey: string, beta: boolean): Record<string, string>
   ...(beta ? { 'anthropic-beta': FILES_BETA } : {}),
 })
 
-/** 用 GET /models 校验 API Key（不产生费用） */
+/** 用 GET /models 校验 API Key（不产生费用）；仅内置 DeepSeek 提供商使用 */
 export const verifyApiKey = async (apiKey: string, signal?: AbortSignal): Promise<void> => {
   await request(`${API_ORIGIN}/models`, {
     method: 'GET',
@@ -129,62 +121,4 @@ export const deleteFile = async (apiKey: string, fileId: string): Promise<void> 
     method: 'DELETE',
     headers: anthropicHeaders(apiKey, true),
   })
-}
-
-const hasFile = (body: CreateMessageRequest) =>
-  body.messages.some(
-    (message) =>
-      typeof message.content !== 'string' &&
-      message.content.some((block) => block.type === 'image' || block.type === 'document')
-  )
-
-/**
- * POST /anthropic/v1/messages（stream: true），逐个产出流式事件，收到 message_stop 时结束。
- * ping、保活注释与无法解析的内容不产出；中止请求时抛出 signal 的 AbortError。
- */
-export async function* streamMessage(
-  apiKey: string,
-  body: CreateMessageRequest,
-  signal: AbortSignal
-): AsyncGenerator<MessageStreamEvent> {
-  const response = await request(`${ANTHROPIC_BASE_URL}/messages`, {
-    method: 'POST',
-    headers: {
-      ...anthropicHeaders(apiKey, hasFile(body)),
-      'Content-Type': 'application/json',
-      Accept: 'text/event-stream',
-    },
-    body: JSON.stringify({ ...body, stream: true }),
-    signal,
-  })
-  const contentType = response.headers.get('Content-Type') ?? ''
-  if (!response.body || !contentType.includes('text/event-stream')) {
-    throw await readErrorResponse(response, 'protocol', '')
-  }
-  for await (const { event: eventName, data } of readServerSentEvents(response.body, signal)) {
-    let payload: unknown
-    try {
-      payload = JSON.parse(data)
-    } catch {
-      if (eventName !== 'error') {
-        continue
-      }
-    }
-    if (isErrorBody(payload)) {
-      throw new ApiError('stream', payload.error.message)
-    }
-    if (eventName === 'error') {
-      throw new ApiError('stream', data)
-    }
-    const event = readMessageEvent(payload)
-    if (!event) {
-      continue
-    }
-    yield event
-    if (event.type === 'message_stop') {
-      return
-    }
-  }
-  // 服务端没有提供错误内容时保持为空，不推测断流原因。
-  throw new ApiError('interrupted', '')
 }

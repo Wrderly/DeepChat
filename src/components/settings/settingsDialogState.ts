@@ -1,10 +1,10 @@
 import { create } from 'zustand'
-import { useSettings } from '../../services/settings.js'
+import { defaultModelRef, resolveModel } from '../../services/providers/select.js'
 
-/** 设置弹窗的分组：通用设置 / 模型参数 / 数据管理 */
-export type SettingsSection = 'general' | 'model' | 'data'
+/** 设置弹窗的分组：通用设置 / 模型服务 / 模型参数 / 数据管理 */
+export type SettingsSection = 'general' | 'providers' | 'model' | 'data'
 
-/** 设置弹窗：侧边栏底部、没有 API Key 时的操作与 401 提示都可以打开；section 为打开时选中的分组 */
+/** 设置弹窗：侧边栏底部、缺少模型或密钥时的操作与 401 提示都可以打开；section 为打开时选中的分组 */
 export const useSettingsDialog = create(() => ({
   open: false,
   section: 'general' as SettingsSection,
@@ -15,11 +15,12 @@ export const openSettings = (section: SettingsSection) =>
 
 export const closeSettings = () => useSettingsDialog.setState({ open: false })
 
-/** 没有 API Key 时打开设置并选中 API Key 所在的「数据管理」，返回是否已有 Key */
-export const ensureApiKey = () => {
-  if (useSettings.getState().apiKey) {
+/** 默认模型或其提供商不可用（没有密钥）时打开「模型服务」，返回是否可以开始对话 */
+export const ensureChatReady = () => {
+  const resolved = resolveModel(defaultModelRef())
+  if (resolved?.provider.apiKey) {
     return true
   }
-  openSettings('data')
+  openSettings('providers')
   return false
 }

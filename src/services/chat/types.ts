@@ -2,13 +2,13 @@ import type { TranslationMessage } from '../../i18n/index.js'
 import type { ApiErrorKind } from '../api/client.js'
 import type { ApiOptions } from '../api/options.js'
 import type {
-  ChatModel,
   MessageUsage,
   ServerToolBlock,
   StopDetails,
   StopReason,
   TextCitation,
 } from '../api/types.js'
+import type { ModelRef } from '../providers/types.js'
 
 /**
  * 消息附件。id 是本地标识（IndexedDB files 表的主键，原件按它存储，所有引用同一 id 的消息共用一份），
@@ -78,8 +78,8 @@ export type AssistantMessage = MessageBranch & {
   id: string
   role: 'assistant'
   createdAt: number
-  /** 未记录模型时为 null，续写使用当前默认模型。 */
-  model: ChatModel | null
+  /** 本轮使用的提供商与模型快照；提供商被删除后仍保留名字用于展示。 */
+  model: ModelRef | null
   /** 请求时是否开启深度思考 */
   thinking?: boolean
   /** 请求时是否声明 deepseek_web_search；关闭时仍声明 deepseek_read_url */
@@ -125,6 +125,8 @@ export type Session = {
   options?: ApiOptions
   /** 会话级系统提示词；缺省时使用内置默认提示词 */
   systemPrompt?: string
+  /** 会话当前选择的模型；缺省时使用全局默认模型 */
+  model?: ModelRef
 }
 
 /** 会话列表元数据；消息只在打开会话时加载。 */

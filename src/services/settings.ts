@@ -9,11 +9,10 @@ export type Locale = 'zh-CN' | 'en-US'
 export type ThemePreference = 'light' | 'dark' | 'system'
 
 /**
- * 本机设置，存 localStorage：API Key、语言、主题、位置、朗读音色、深度思考与智能搜索开关、
- * 侧边栏收起状态、新对话默认使用的生成参数
+ * 本机设置，存 localStorage：语言、主题、位置、朗读音色、深度思考与智能搜索开关、
+ * 侧边栏收起状态、新对话默认使用的生成参数。API Key 归属各自的模型提供商，不在这里。
  */
 type Settings = {
-  apiKey: string | null
   locale: Locale
   themePreference: ThemePreference
   location: UserLocation | null
@@ -25,15 +24,14 @@ type Settings = {
 }
 
 const KEYS = {
-  apiKey: 'deepseek-chat:api-key',
-  locale: 'deepseek-chat:locale',
-  location: 'deepseek-chat:location',
-  themePreference: 'deepseek-chat:theme-preference',
-  ttsVoice: 'deepseek-chat:tts-voice',
-  thinking: 'deepseek-chat:thinking',
-  search: 'deepseek-chat:search',
-  siderCollapsed: 'deepseek-chat:sider-collapsed',
-  apiOptions: 'deepseek-chat:api-options',
+  locale: 'deepchat:locale',
+  location: 'deepchat:location',
+  themePreference: 'deepchat:theme-preference',
+  ttsVoice: 'deepchat:tts-voice',
+  thinking: 'deepchat:thinking',
+  search: 'deepchat:search',
+  siderCollapsed: 'deepchat:sider-collapsed',
+  apiOptions: 'deepchat:api-options',
 } as const
 
 const read = (key: string) => {
@@ -94,7 +92,6 @@ const initialThemePreference = (): ThemePreference => {
 const initialTtsVoice = (): TtsVoice => (read(KEYS.ttsVoice) === 'tide' ? 'tide' : 'stella')
 
 export const useSettings = create<Settings>(() => ({
-  apiKey: read(KEYS.apiKey),
   locale: initialLocale(),
   location: initialLocation(),
   themePreference: initialThemePreference(),
@@ -124,11 +121,6 @@ export const setThemePreference = (themePreference: ThemePreference) => {
 export const setTtsVoice = (ttsVoice: TtsVoice) => {
   write(KEYS.ttsVoice, ttsVoice)
   useSettings.setState({ ttsVoice })
-}
-
-export const setApiKey = (apiKey: string | null) => {
-  write(KEYS.apiKey, apiKey)
-  useSettings.setState({ apiKey })
 }
 
 export const setThinking = (thinking: boolean) => {

@@ -31,12 +31,23 @@ import {
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import { IconButton } from '../base/IconButton.js'
 import { Tooltip } from '../base/Tooltip.js'
-import { ensureApiKey } from '../settings/settingsDialogState.js'
+import { ensureChatReady, openSettings } from '../settings/settingsDialogState.js'
+import {
+  deepSeekApiKey,
+  defaultModelRef,
+  isDeepSeekProvider,
+  modelSupports,
+  resolveModel,
+  sessionModelRef,
+} from '../../services/providers/select.js'
+import { useProviders } from '../../services/providers/store.js'
 import { ApiOptionsPanel } from '../apiOptions/ApiOptionsPanel.js'
 import { DragMask, useFileDrop } from './DragMask.js'
 import { showToast } from '../base/toastState.js'
 import { ACCEPT, useUploads } from '../../services/attachments.js'
 import { DraftAttachments } from './DraftAttachments.js'
+import { ModelPicker } from './ModelPicker.js'
+import { useComposerModel } from './composerModel.js'
 import { useVoiceInput } from './useVoiceInput.js'
 import { VoiceButton } from './VoiceButton.js'
 import { Spectrum } from './Spectrum.js'
@@ -62,6 +73,19 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const importingHistory = useChatStore((state) => state.importingHistory)
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
+  // 提供商或模型变化时重新计算当前能力
+  useProviders((state) => state.items)
+  const session = useChatStore((state) =>
+    sessionId === null ? undefined : state.sessionCache[sessionId]
+  )
+  const composerModel = useComposerModel((state) => state.model)
+  const preferredRef =
+    sessionId === null ? (composerModel ?? defaultModelRef()) : sessionModelRef(session ?? null)
+  // 提供商被删除后本地选择可能失效，回退到当前默认模型
+  const activeRef = resolveModel(preferredRef) ? preferredRef : defaultModelRef()
+  const active = resolveModel(activeRef)
+  const preset = isDeepSeekProvider(active?.provider)
+  const supportsThinking = modelSupports(active?.model, 'thinking')
   const sessionOptions = useChatStore((state): ApiOptions | undefined => {
     const session = sessionId === null ? undefined : state.sessionCache[sessionId]
     return session ? session.options : undefined
@@ -119,21 +143,36 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   }, [t])
 
   const acceptFiles = (files: File[]) => {
-    if (files.length === 0 || useChatStore.getState().importingHistory || !ensureApiKey()) {
+    if (files.length === 0 || useChatStore.getState().importingHistory) {
       return
     }
-    const error = addDraftFiles(sessionId, files, useSettings.getState().apiKey ?? '')
+    if (!ensureChatReady() || !active) {
+      return
+    }
+    if (!active.provider.apiKey) {
+      openSettings('providers')
+      return
+    }
+    const error = addDraftFiles(sessionId, files, {
+      apiKey: active.provider.apiKey,
+      filesApi: preset,
+    })
     if (error) {
       showToast(error)
     }
   }
   const retryFile = useCallback(
     (id: string) => {
-      if (!useChatStore.getState().importingHistory && ensureApiKey()) {
-        retryDraftAttachment(sessionId, id, useSettings.getState().apiKey ?? '')
+      if (useChatStore.getState().importingHistory) {
+        return
       }
+      if (!active?.provider.apiKey) {
+        openSettings('providers')
+        return
+      }
+      retryDraftAttachment(sessionId, id, active.provider.apiKey)
     },
-    [sessionId]
+    [sessionId, active?.provider.apiKey]
   )
   const removeFile = useCallback(
     (id: string) => {
@@ -185,7 +224,10 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       return
     }
     // 文本与上传完成态由提交动作读取最新快照，不使用上一次渲染的草稿。
-    if (!ensureApiKey() || !sendMessage(sessionId, options, systemPrompt)) {
+    if (
+      !ensureChatReady() ||
+      !sendMessage(sessionId, options, systemPrompt, sessionId === null ? activeRef : undefined)
+    ) {
       return
     }
     stopReadAloud()
@@ -246,30 +288,38 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       <div className={styles.functionRow}>
         {/* 深度思考 / 智能搜索开关，tooltip 在按钮上方 */}
         <div ref={togglesRef} className={styles.toggles}>
-          <Tooltip content={t('deactivatedThinkTooltip')}>
+          <Tooltip
+            content={
+              supportsThinking ? t('deactivatedThinkTooltip') : t('thinkingUnsupportedTooltip')
+            }
+          >
             <button
               type="button"
               className={clsx(styles.toggle, thinking && styles.selected)}
               aria-label={t('thinkingSwitch')}
               aria-pressed={thinking}
+              aria-disabled={!supportsThinking}
+              disabled={!supportsThinking}
               onClick={() => setThinking(!thinking)}
             >
               <IconThinkOutline14 />
               <span className={styles.toggleLabel}>{t('thinkingSwitch')}</span>
             </button>
           </Tooltip>
-          <Tooltip content={t('deactivatedSearchTooltip')}>
-            <button
-              type="button"
-              className={clsx(styles.toggle, search && styles.selected)}
-              aria-label={t('search')}
-              aria-pressed={search}
-              onClick={() => setSearch(!search)}
-            >
-              <IconGlobeLanguageOutline14 />
-              <span className={styles.toggleLabel}>{t('search')}</span>
-            </button>
-          </Tooltip>
+          {preset ? (
+            <Tooltip content={t('deactivatedSearchTooltip')}>
+              <button
+                type="button"
+                className={clsx(styles.toggle, search && styles.selected)}
+                aria-label={t('search')}
+                aria-pressed={search}
+                onClick={() => setSearch(!search)}
+              >
+                <IconGlobeLanguageOutline14 />
+                <span className={styles.toggleLabel}>{t('search')}</span>
+              </button>
+            </Tooltip>
+          ) : null}
           <ApiOptionsPanel
             value={options}
             onChange={setOptions}
@@ -296,17 +346,24 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
           </ApiOptionsPanel>
         </div>
         <div className={styles.right}>
+          <ModelPicker sessionId={sessionId} />
           <VoiceButton
             status={voice.status}
             disabled={!voice.available}
             seconds={voice.seconds}
             onClick={() => {
-              if (
-                voice.status !== 'idle' ||
-                (!useChatStore.getState().importingHistory && ensureApiKey())
-              ) {
+              if (voice.status !== 'idle') {
                 void voice.toggle()
+                return
               }
+              if (useChatStore.getState().importingHistory) {
+                return
+              }
+              if (!deepSeekApiKey()) {
+                openSettings('providers')
+                return
+              }
+              void voice.toggle()
             }}
           />
           <IconButton
@@ -315,7 +372,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
             icon={<IconPaperclipOutline16 />}
             tooltip={t('uploadFile')}
             disabled={importingHistory}
-            onClick={() => ensureApiKey() && fileInputRef.current?.click()}
+            onClick={() => ensureChatReady() && fileInputRef.current?.click()}
           />
           <input
             ref={fileInputRef}

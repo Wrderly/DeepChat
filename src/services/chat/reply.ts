@@ -15,21 +15,37 @@ import type {
   UserMessage,
 } from './types.js'
 
+/** 内联图片：非 Files API 提供商直接把本地图片转成 base64 传过去 */
+export type InlineFile = { mediaType: string; data: string }
+export type InlineFiles = ReadonlyMap<string, InlineFile>
+
 /**
  * 文件按 Files API 的 file_id（附件的 serverId）引用：图片用 image 块，其余用 document 块。
- * 发送前 streamReply 会先补齐 serverId；仍为 null 的是本地没有原件的附件，不进入请求。
+ * 提供 inline 时改为内联图片块（只有图片能内联，文档在非 Files 模式下不支持）。
  */
-const toFileBlocks = (files: FileAttachment[]): FileBlockParam[] =>
-  files.flatMap(({ serverId, isImage }) =>
-    serverId
-      ? [
-          {
-            type: isImage ? 'image' : 'document',
-            source: { type: 'file', file_id: serverId },
-          },
-        ]
-      : []
-  )
+const toFileBlocks = (files: FileAttachment[], inline?: InlineFiles): FileBlockParam[] =>
+  files.flatMap((file): FileBlockParam[] => {
+    if (inline) {
+      const inlined = file.isImage ? inline.get(file.id) : undefined
+      return inlined
+        ? [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: inlined.mediaType, data: inlined.data },
+            },
+          ]
+        : []
+    }
+    if (!file.serverId) {
+      return []
+    }
+    return [
+      {
+        type: file.isImage ? 'image' : 'document',
+        source: { type: 'file', file_id: file.serverId },
+      },
+    ]
+  })
 
 const toReplyBlock = (block: OutputBlockStart, now: number): ReplyBlock | null => {
   switch (block.type) {
@@ -202,8 +218,8 @@ const isUsableReply = (message: Message): message is AssistantMessage =>
   getReplyText(message) !== ''
 
 /** 有文件时用内容块数组：先文件后文本，文件按 Files API 的 file_id 引用 */
-const toUserParam = ({ content, files }: UserMessage): MessageParam => {
-  const blocks = toFileBlocks(files)
+const toUserParam = ({ content, files }: UserMessage, inline?: InlineFiles): MessageParam => {
+  const blocks = toFileBlocks(files, inline)
   return blocks.length === 0
     ? { role: 'user', content }
     : {
@@ -305,7 +321,8 @@ export const toRequestMessages = (
   question: UserMessage,
   prefix?: AssistantMessage,
   thinking = prefix?.thinking ?? false,
-  latestReminder?: string
+  latestReminder?: string,
+  inlineFiles?: InlineFiles
 ): MessageParam[] => {
   const messages: MessageParam[] = []
   let previousReminder: string | undefined
@@ -317,15 +334,15 @@ export const toRequestMessages = (
     }
   }
   for (const [user, reply] of getContextRounds(history)) {
-    // 历史提问没有文字、附件也都没有 serverId 时，提问为空，连同回答一起省略。
-    if (!user.content && toFileBlocks(user.files).length === 0) {
+    // 历史提问没有文字、附件也都没有可用文件时，提问为空，连同回答一起省略。
+    if (!user.content && toFileBlocks(user.files, inlineFiles).length === 0) {
       continue
     }
     appendReminder(reply.latestReminder)
-    messages.push(toUserParam(user), toAssistantParam(reply))
+    messages.push(toUserParam(user, inlineFiles), toAssistantParam(reply))
   }
   appendReminder(latestReminder)
-  messages.push(toUserParam(question))
+  messages.push(toUserParam(question, inlineFiles))
   if (prefix?.prefix) {
     const assistant = toAssistantParam(prefix, true, thinking)
     // 没有非空白正文或有效思考时直接重发原问题，避免服务端拒绝空 Prefill。

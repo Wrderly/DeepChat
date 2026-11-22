@@ -297,12 +297,91 @@
   }
 }
 
+.modelButton {
+  max-width: 190px;
+  padding-right: 8px;
+}
+
+.modelLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modelIcon {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.modelProvider {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.checkPlaceholder {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 560px) {
+  .modelButton {
+    max-width: 148px;
+  }
+
+  /* 窄屏只显示模型名，避免「提供商 / 模型」整段被截断 */
+  .modelProvider {
+    display: none;
+  }
+}
+
 .right {
   display: flex;
   flex-shrink: 0;
   align-items: center;
   gap: 4px;
   margin-left: auto;
+}
+
+/* 窄屏：控件压缩成图标行，模型入口收成图标按钮（当前模型在菜单里勾选） */
+@media (max-width: 430px) {
+  .toggle {
+    height: 32px;
+    padding: 0 7px;
+  }
+
+  .toggles {
+    gap: 8px;
+  }
+
+  .right {
+    flex: 0 0 auto;
+    gap: 2px;
+  }
+
+  .modelButton {
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+  }
+
+  .modelButton > svg {
+    display: none;
+  }
+
+  .modelIcon {
+    display: inline-flex;
+  }
+
+  .modelLabel {
+    display: none;
+  }
+
+  .sendButton {
+    margin-left: 4px;
+  }
 }
 
 .sendButton {

@@ -15,7 +15,7 @@ pnpm install
 pnpm dev
 ```
 
-打开 http://localhost:8090 ，在设置 → 数据管理里填写 API Key 后即可对话。
+打开 http://localhost:8090 ，在设置 → 模型服务里添加提供商并填写 API Key 后即可对话。内置的 DeepSeek 提供商只需填写密钥；自定义提供商可使用 Anthropic 或 OpenAI 协议。
 
 生成静态产物：
 
@@ -29,7 +29,8 @@ pnpm build
 
 - **会话**：新建会话、按首条提问自动命名、重命名、删除；消息存在多个版本时可在分支间切换；从任意消息分支出新会话，新会话带上该轮提问与回答。
 - **消息编辑**：就地编辑提问、编辑助手的思考内容与回答内容，保存后立即写入当前上下文。提问编辑框、思考编辑框、回答编辑框各有独立外观，统一使用「取消 / 保存」。
-- **对话**：流式输出、深度思考、智能搜索、链接阅读与来源引用；随时停止生成，也可以在符合条件时继续生成。
+- **模型服务**：在输入框里为当前会话选择模型；可添加任意数量的 Anthropic / OpenAI 兼容提供商，分别配置名称、API 域名、路径、密钥、额外请求头 / 请求体与模型列表。内置 DeepSeek 提供商始终存在且不可删除，并可从服务端拉取模型列表。
+- **对话**：流式输出、深度思考、智能搜索、链接阅读与来源引用；随时停止生成，也可以在符合条件时继续生成。深度思考由所选模型的能力决定；智能搜索、链接阅读、语音输入与朗读由内置 DeepSeek 提供商提供。
 - **生成参数**：思考强度、温度、Top P、最大输出、停止序列。设置 → 模型参数保存新会话的默认值；输入框底部的「会话设置」按会话覆盖或恢复默认；新会话页面可在发出第一条消息前预设。
 - **系统提示词**：按会话设置，留空时使用内置提示词。
 - **输入**：多行输入（Enter 发送、Shift+Enter 换行）、附件上传 / 粘贴 / 拖拽、语音输入、回复朗读。
@@ -42,7 +43,7 @@ pnpm build
 
 | 设置 | 说明 |
 | --- | --- |
-| API Key | 保存在本地，用于请求对话、文件、语音与朗读接口 |
+| 模型服务 | 提供商、API Key 与模型列表；内置 DeepSeek 提供商始终存在 |
 | 语言 | 简体中文 / English |
 | 主题 | 浅色、深色或跟随系统 |
 | 位置 | 地区信息，用于对话中的上下文提示 |
@@ -51,7 +52,7 @@ pnpm build
 
 ## 数据与存储
 
-API Key 与各项设置保存在浏览器 localStorage（键名前缀 `deepseek-chat:`），会话与附件原件保存在 IndexedDB（库名 `deepseek-chat`），本地数据按浏览器用户配置和站点源（origin）隔离。发送对话、上传附件、语音输入与朗读时，相应内容会提交给配置的 API 服务。
+各提供商的 API Key 与各项设置保存在浏览器 localStorage（键名前缀 `deepchat:`，提供商列表在 `deepchat:providers`），会话与附件原件保存在 IndexedDB（库名 `deepchat`），本地数据按浏览器用户配置和站点源（origin）隔离。发送对话、上传附件、语音输入与朗读时，相应内容会提交给配置的 API 服务；请求由浏览器直接发往各提供商的 API 域名。
 
 历史导入导出使用 ZIP 格式，格式说明见[历史导入导出](src/services/chat/history/README.md)。导出包含全部会话与本地可用的图片原件；导入在校验通过后整体替换本地会话与附件。
 
@@ -70,7 +71,7 @@ API Key 与各项设置保存在浏览器 localStorage（键名前缀 `deepseek-
 
 [rspack.config.ts](rspack.config.ts) 默认连接 `https://api.deepseek.com`，`createConfig({ apiOrigin, devServer })` 支持自定义 API 地址与开发服务器代理。
 
-聊天默认使用 `deepseek-flash`，通过 Anthropic 兼容的 Messages / Files API 通信，语音使用 ASR / TTS 接口；请求使用搜索、链接阅读、标题与 `latest_reminder` 等扩展能力。附件可用的格式以服务端校验为准。
+内置 DeepSeek 提供商通过 Anthropic 兼容的 Messages / Files API 通信，语音使用 ASR / TTS 接口，请求带搜索、链接阅读、标题与 `latest_reminder` 等扩展能力。自定义提供商使用 Anthropic Messages 或 OpenAI Chat Completions 协议；由于 Files API 仅内置提供商可用，图片会以 base64 内联，不支持的扩展能力自动忽略。附件可用的格式以服务端校验为准。
 
 ```text
 src/
@@ -80,6 +81,7 @@ src/
   services/
     api/               API 请求、SSE 与协议类型
     chat/              会话、消息分支、本地存储与历史导入导出
+    providers/         提供商定义、存储与模型解析
     markdown/          Markdown 解析、代码高亮与图表
     platform/          原生壳适配（返回键、文件分享）
     speech/            录音与朗读

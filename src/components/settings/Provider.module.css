@@ -1,0 +1,343 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 8px;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  color: var(--dsw-alias-label-primary);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 500;
+}
+
+.description {
+  margin: 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 14px;
+  background-color: transparent;
+}
+
+.cardDefault {
+  border-color: var(--dsw-alias-border-l2);
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cardName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badges {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background-color: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.badgeDefault {
+  color: var(--dsw-alias-brand-text);
+}
+
+.cardMeta {
+  overflow-wrap: anywhere;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 2px;
+}
+
+.linkButton {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--dsw-alias-brand-text);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.linkButton:disabled {
+  color: var(--dsw-alias-label-caption);
+  cursor: default;
+}
+
+.linkDanger {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.addButton {
+  align-self: flex-start;
+}
+
+.empty {
+  padding: 24px 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.editorDialog {
+  width: 560px;
+}
+
+.editorMain {
+  min-height: 0;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: min(62vh, 540px);
+  padding-right: 4px;
+  overflow-y: auto;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.input,
+.textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background-color: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--ds-transition-duration) var(--ds-ease-in-out);
+}
+
+.input {
+  height: 38px;
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: var(--dsw-alias-brand-primary);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--dsw-alias-label-caption);
+}
+
+.input:disabled {
+  color: var(--dsw-alias-label-tertiary);
+  cursor: not-allowed;
+}
+
+.textarea {
+  min-height: 68px;
+  padding: 8px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 18px;
+  resize: vertical;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.row > .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.hint {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.error {
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.models {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 「添加模型」紧跟模型列表，按内容宽度左对齐，不铺满整行 */
+.models + .linkButton {
+  align-self: flex-start;
+}
+
+.modelRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+}
+
+.modelRowHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modelRowHead .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.capabilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.capability {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.capability input {
+  margin: 0;
+  accent-color: var(--dsw-alias-brand-primary);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.advancedToggle {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.confirmText {
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+@media not all and (min-width: 768px) {
+  /* 移动端按底部抽屉铺满：内容区自己滚动，页脚始终可见 */
+  .editorDialog {
+    align-self: flex-end;
+    width: 100%;
+    max-width: none;
+    height: calc(100% - 64px);
+    max-height: none;
+    padding-bottom: calc(20px + var(--safe-area-bottom, 0px));
+    border-radius: 24px 24px 0 0;
+  }
+
+  .editorMain {
+    display: flex;
+    flex: 1;
+  }
+
+  .editor {
+    flex: 1;
+    max-height: none;
+    min-height: 0;
+    padding-right: 0;
+  }
+
+  /* 窄屏把并排字段改成上下排列，避免地址被截断 */
+  .row {
+    flex-direction: column;
+  }
+
+  .confirmActions > button {
+    min-height: 44px;
+  }
+}

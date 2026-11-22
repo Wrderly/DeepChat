@@ -4,6 +4,7 @@ import { createId } from '../../utils/id.js'
 import {
   cancelUpload,
   isImage,
+  markUploadInline,
   resolveMimeType,
   uploadAttachment,
   validateFiles,
@@ -56,11 +57,14 @@ const upload = (attachment: DraftAttachment, apiKey: string) => {
   ).catch(() => {})
 }
 
-/** 整批校验通过后才加入草稿并开始上传。 */
+/**
+ * 整批校验通过后才加入草稿。
+ * filesApi 为 false 时不走 Files API：只有图片能内联，直接标记就绪。
+ */
 export const addDraftFiles = (
   sessionId: string | null,
   files: File[],
-  apiKey: string
+  target: { apiKey: string; filesApi: boolean }
 ): TranslationMessage | null => {
   if (files.length === 0) {
     return null
@@ -76,8 +80,16 @@ export const addDraftFiles = (
       isImage: isImage(resolveMimeType(file)),
     })
   )
+  if (!target.filesApi) {
+    if (added.some((attachment) => !attachment.isImage)) {
+      return { key: 'uploadImageOnly' }
+    }
+    updateDraft(sessionId, (draft) => ({ ...draft, attachments: [...draft.attachments, ...added] }))
+    added.forEach((attachment) => markUploadInline(attachment.id))
+    return null
+  }
   updateDraft(sessionId, (draft) => ({ ...draft, attachments: [...draft.attachments, ...added] }))
-  added.forEach((attachment) => upload(attachment, apiKey))
+  added.forEach((attachment) => upload(attachment, target.apiKey))
   return null
 }
 
@@ -101,7 +113,8 @@ export const prepareDraftMessage = (draft: Draft, tasks: Record<string, UploadTa
   const files: (FileAttachment & { serverId: string; blob: Blob })[] = []
   for (const attachment of draft.attachments) {
     const task = tasks[attachment.id]
-    if (task?.status !== 'done' || !task.serverId) {
+    // 内联模式下 serverId 为空串，只要有本地原件即可发送
+    if (task?.status !== 'done') {
       return null
     }
     files.push({

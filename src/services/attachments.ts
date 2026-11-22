@@ -213,6 +213,14 @@ export const cancelUpload = (id: string) => {
   setTask(id, null)
 }
 
+/**
+ * 非 Files API 提供商：附件不经过上传，直接标记就绪。
+ * serverId 为空串，进入请求时由内联流程读取本地原件转 base64。
+ */
+export const markUploadInline = (id: string) => {
+  setTask(id, { status: 'done', serverId: '' })
+}
+
 /** 检查旧图片的 file_id。超限返回 null 以触发补传，无法读取原件时保留原 ID。 */
 export const checkImageFileIds = async (files: FileAttachment[], signal: AbortSignal) => {
   const checked = new Map<string, string | null>()

@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
-import { ApiError, streamMessage } from '../api/client.js'
-import { toRequestParams, type ApiOptions } from '../api/options.js'
-import type { ChatModel, CreateMessageRequest } from '../api/types.js'
+import { resizeUploadImage } from '../../utils/resizeUploadImage.js'
+import { streamChat } from '../api/chat.js'
+import { ApiError } from '../api/client.js'
+import type { ApiOptions } from '../api/options.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
 import {
   cancelUpload,
@@ -11,6 +12,15 @@ import {
   uploadAttachment,
   useUploads,
 } from '../attachments.js'
+import {
+  defaultModelRef,
+  isDeepSeekProvider,
+  modelSupports,
+  resolveModel,
+  sessionModelRef,
+  toModelRef,
+} from '../providers/select.js'
+import type { ModelRef } from '../providers/types.js'
 import { useSettings } from '../settings.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
 import * as db from './db.js'
@@ -28,6 +38,8 @@ import {
   getContextRounds,
   settleReply,
   toRequestMessages,
+  type InlineFile,
+  type InlineFiles,
 } from './reply.js'
 import {
   toSessionSummary,
@@ -42,31 +54,16 @@ import {
   type UserMessage,
 } from './types.js'
 
-/** deepseek-flash 同时支持深度思考与图片输入 */
-const MODEL: ChatModel = 'deepseek-flash'
 /** 所有生成请求统一携带的助手身份说明 */
 export const SYSTEM_PROMPT = '该助手为DeepSeek，由深度求索公司创造。'
 /** 保留最近打开的详情；当前会话、生成中及尚未成功保存的会话不淘汰。 */
 const SESSION_CACHE_LIMIT = 5
-/** 安全审核固定开启，所有请求都走扩展模式 */
-const SAFETY_CHECK = { level: 'high' } as const
 /** 服务端判定 file_id 失效后，重新补传并重发的最多次数（不含首次请求） */
 const FILE_RETRY_LIMIT = 2
 /** 退避基数，第 n 次重试等待 2^n 倍；连续失败达到上限就放弃，把原始报错展示出来 */
 const FILE_RETRY_BASE_DELAY = 1000
 /** 会话级设置改动写入 IndexedDB 的合并延迟：拖动滑块、逐字输入只落盘最后一次 */
 const SESSION_SAVE_DELAY = 300
-
-/** 阅读链接始终开启，智能搜索开关控制是否另行声明搜索工具（含边想边搜）。 */
-const serverTools = (search: boolean): CreateMessageRequest['tools'] => {
-  const tools: CreateMessageRequest['tools'] = [
-    { type: 'deepseek_read_url', name: 'deepseek_read_url' },
-  ]
-  if (search) {
-    tools.push({ type: 'deepseek_web_search', name: 'deepseek_web_search' })
-  }
-  return tools
-}
 
 /** 允许自动补标题的请求；手动重命名后取消本轮标题写入，包含主动清空标题的情况。 */
 const titleRequests = new Set<AbortController>()
@@ -121,6 +118,8 @@ const sessionAccess = new Map<string, number>()
 const unsavedSessions = new Set<string>()
 /** 保存失败时保留原件，重试成功后才释放。 */
 const pendingFiles = new Map<string, db.StoredFile[]>()
+/** 本轮刚发送、尚未落盘的附件原件；内联模式读取图片时优先使用，避免与异步保存竞态。 */
+const inlineBlobs = new Map<string, Blob>()
 const deletingSessions = new Set<string>()
 const deletionTasks = new Set<Promise<boolean>>()
 const streamFlushes = new Map<string, () => void>()
@@ -265,18 +264,23 @@ export const bindChatPersistence = () => {
   }
 }
 
-/** 按当前开关创建回复：深度思考对应 thinking，智能搜索控制 deepseek_web_search，参数取会话覆盖值或设置页默认值。 */
+/**
+ * 按当前开关创建回复：深度思考对应 thinking，智能搜索只在 DeepSeek 提供商下开启，
+ * 参数取会话覆盖值或设置页默认值；模型不可用时保留快照，由请求阶段给出提示。
+ */
 const createReply = (
-  session?: Pick<Session, 'options' | 'systemPrompt'> | null
+  session: Pick<Session, 'options' | 'systemPrompt'> | null | undefined,
+  requested: ModelRef | null
 ): AssistantMessage => {
   const { thinking, search, apiOptions } = useSettings.getState()
+  const resolved = resolveModel(requested)
   return {
     id: createId(),
     role: 'assistant',
     createdAt: Date.now(),
-    model: MODEL,
-    thinking,
-    search,
+    model: resolved ? toModelRef(resolved.provider, resolved.model) : requested,
+    thinking: Boolean(thinking && (!resolved || modelSupports(resolved.model, 'thinking'))),
+    search: Boolean(search && isDeepSeekProvider(resolved?.provider)),
     options: session?.options ?? apiOptions,
     systemPrompt: session?.systemPrompt,
     prefix: true,
@@ -604,14 +608,27 @@ export const setSessionSystemPrompt = (sessionId: string, prompt: string) => {
 }
 
 /**
+ * 切换会话使用的模型。只影响之后发起的新回复，已生成消息的快照不变。
+ */
+export const setSessionModel = (sessionId: string, model: ModelRef) => {
+  if (get().importingHistory || deletingSessions.has(sessionId) || !getSession(sessionId)) {
+    return
+  }
+  updateSession(sessionId, (session) => ({ ...session, model }))
+  scheduleSessionSave(sessionId)
+}
+
+/**
  * 提交指定会话的最新草稿；null 表示新建会话。
- * options、systemPrompt 只在新建会话时写入，作为该会话第一条消息的初始设置。
+ * options、systemPrompt、model 只在新建会话时写入，作为该会话第一条消息的初始设置；
+ * 已有会话传入 model 时同时更新会话选择的模型。
  * 同步接收成功才清空草稿，附件原件由会话接管；保存失败仍通过保存入口重试。
  */
 export const sendMessage = (
   targetSessionId: string | null,
   options?: ApiOptions,
-  systemPrompt?: string
+  systemPrompt?: string,
+  model?: ModelRef | null
 ) => {
   if (get().importingHistory || !get().ready) {
     return false
@@ -629,6 +646,10 @@ export const sendMessage = (
   ) {
     return false
   }
+  const requested = model === undefined ? defaultModelRef() : model
+  if (requested === null) {
+    return false
+  }
   if (sessionId === null) {
     const session: Session = {
       id: createId(),
@@ -639,6 +660,7 @@ export const sendMessage = (
       rootMessageId: null,
       ...(options ? { options } : {}),
       ...(systemPrompt ? { systemPrompt } : {}),
+      model: requested,
     }
     sessionId = session.id
     touchSession(session.id)
@@ -651,6 +673,9 @@ export const sendMessage = (
   const current = getSession(sessionId)
   if (!current) {
     return false
+  }
+  if (model !== undefined) {
+    updateSession(sessionId, (session) => ({ ...session, model: requested }))
   }
   const history = getVisibleMessages(current)
   const question: UserMessage = {
@@ -669,12 +694,13 @@ export const sendMessage = (
     })),
     createdAt: now,
   }
-  const reply = createReply(current)
+  const reply = createReply(current, requested)
   updateSession(sessionId, (session) => ({
     ...appendBranch(session, history.at(-1)?.id ?? null, [question, reply]),
     updatedAt: now,
   }))
   if (files.length > 0) {
+    files.forEach(({ id, blob }) => inlineBlobs.set(id, blob))
     pendingFiles.set(sessionId, [
       ...(pendingFiles.get(sessionId) ?? []),
       ...files.map(({ id, blob }) => ({ id, blob })),
@@ -703,7 +729,7 @@ export const regenerateReply = (sessionId: string, messageId?: string) => {
     return
   }
   const history = path.slice(0, index - 1)
-  const reply = createReply(session)
+  const reply = createReply(session, session.model ?? defaultModelRef())
   updateSession(sessionId, (s) => ({
     ...appendBranch(s, question.id, [reply]),
     updatedAt: Date.now(),
@@ -735,7 +761,7 @@ export const editMessage = (sessionId: string, messageId: string, content: strin
     files: previous.files,
     createdAt: Date.now(),
   }
-  const reply = createReply(session)
+  const reply = createReply(session, sessionModelRef(session))
   updateSession(sessionId, (s) => ({
     ...appendBranch(s, path[index - 1]?.id ?? null, [question, reply]),
     updatedAt: Date.now(),
@@ -933,8 +959,10 @@ export const continueReply = (sessionId: string, messageId: string) => {
   const { thinking, search, apiOptions } = useSettings.getState()
   const reply: AssistantMessage = {
     ...previous,
-    // 未记录请求配置的回复，续写时使用默认模型和当前开关。
-    model: previous.model ?? MODEL,
+    // 原模型被删除时改用会话当前模型，两者都不可用时保留旧快照，请求阶段给出提示。
+    model: resolveModel(previous.model)
+      ? previous.model
+      : (sessionModelRef(session) ?? previous.model),
     thinking: previous.thinking ?? thinking,
     search: previous.search ?? search,
     options: previous.options ?? session.options ?? apiOptions,
@@ -1046,12 +1074,16 @@ const refreshRequest = (sessionId: string, request: Request): Request => {
  * - 历史轮次（仅进入上下文的）中没有 serverId 的附件，多为导入的图片：从最新的消息往前逐张补传，
  *   失败静默跳过，该附件不进入本次请求，下次发送时再试。
  */
-const prepareFiles = async (sessionId: string, request: Request, signal: AbortSignal) => {
+const prepareFiles = async (
+  sessionId: string,
+  request: Request,
+  apiKey: string,
+  signal: AbortSignal
+) => {
   const epoch = historyEpoch
   // 服务端判定 file_id 失效时会清掉会话里的 serverId，先用最新消息替换请求快照，
   // 否则快照里仍是旧 id，补传会直接复用它。
   request = refreshRequest(sessionId, request)
-  const apiKey = useSettings.getState().apiKey ?? ''
   const serverIds = new Map<string, string>()
   // 停止生成立即生效；上传本身不取消（输入框与其他消息可能共用同一任务），完成后照常写回 serverId
   const aborted = new Promise<never>((_, reject) => {
@@ -1197,6 +1229,53 @@ const waitForRetry = (attempt: number, signal: AbortSignal) =>
     signal.addEventListener('abort', onAbort, { once: true })
   })
 
+/** 读取本地原件并转成 base64；找不到原件时返回 null，该附件不进入请求 */
+const readInlineFile = async (file: FileAttachment, signal: AbortSignal) => {
+  // 本轮刚发送的附件可能还没完成落盘，先用内存里的原件
+  const blob = inlineBlobs.get(file.id) ?? (await db.loadFile(file.id))
+  if (!blob) {
+    return null
+  }
+  const source = new File([blob], file.name, { type: blob.type || file.mimeType || 'image/png' })
+  const resized = await resizeUploadImage(source, signal)
+  const data = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : ''
+      resolve(result.slice(result.indexOf(',') + 1))
+    }
+    reader.onerror = () => reject(reader.error ?? new Error('Cannot read image'))
+    reader.readAsDataURL(resized)
+  })
+  return { mediaType: resized.type || 'image/png', data }
+}
+
+/** 非 Files API 提供商：把会进入上下文的历史提问与本轮提问里的图片都内联 */
+const loadInlineFiles = async (request: Request, signal: AbortSignal): Promise<InlineFiles> => {
+  const inline = new Map<string, InlineFile>()
+  const users = [
+    ...getContextRounds(request.history).map(([user]) => user),
+    request.question,
+  ]
+  for (const user of users) {
+    for (const file of user.files) {
+      if (!file.isImage || inline.has(file.id)) {
+        continue
+      }
+      signal.throwIfAborted()
+      try {
+        const value = await readInlineFile(file, signal)
+        if (value) {
+          inline.set(file.id, value)
+        }
+      } catch {
+        signal.throwIfAborted()
+      }
+    }
+  }
+  return inline
+}
+
 /**
  * 请求并消费流：先补齐附件的 serverId，再发请求；流式增量按动画帧刷新内存，完成、失败或停止后落盘。
  * 补传失败时回复记为 upload 错误，可重试。
@@ -1204,7 +1283,9 @@ const waitForRetry = (attempt: number, signal: AbortSignal) =>
  */
 const streamReply = async (sessionId: string, initial: AssistantMessage, request: Request) => {
   const controller = new AbortController()
-  if (!getSession(sessionId)?.title) {
+  const resolved = resolveModel(initial.model)
+  const preset = isDeepSeekProvider(resolved?.provider)
+  if (preset && !getSession(sessionId)?.title) {
     titleRequests.add(controller)
   }
   set((state) => ({ streaming: { ...state.streaming, [sessionId]: controller } }))
@@ -1218,12 +1299,32 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
   streamFlushes.set(sessionId, flush)
 
   try {
+    if (!resolved) {
+      reply = settleReply(reply, 'error', Date.now(), {
+        kind: 'http',
+        message: '',
+        localMessage: { key: 'replyModelUnavailable' },
+      })
+      return
+    }
+    if (!resolved.provider.apiKey) {
+      reply = settleReply(reply, 'error', Date.now(), {
+        kind: 'http',
+        message: '',
+        localMessage: { key: 'replyApiKeyMissing' },
+      })
+      return
+    }
+    const { provider, model } = resolved
     for (let attempt = 0; ; attempt += 1) {
       /** 附件补齐前出错属于上传失败，请求还没有发出 */
       let preparing = true
       let receivedContent = false
       try {
-        const prepared = await prepareFiles(sessionId, request, controller.signal)
+        // 只有内置 DeepSeek 使用 Files API；其他提供商直接内联图片，不需要上传
+        const prepared = preset
+          ? await prepareFiles(sessionId, request, provider.apiKey, controller.signal)
+          : request
         preparing = false
         // 附件就绪后获取本轮信息；续写沿用原回答快照，重新生成的快照独立保存。
         const latestReminder = prepared.prefix
@@ -1232,27 +1333,27 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         reply = { ...reply, latestReminder }
         updateReply(sessionId, reply)
         persist(sessionId)
+        const inlineFiles = preset
+          ? undefined
+          : await loadInlineFiles(prepared, controller.signal)
         const messages = toRequestMessages(
           prepared.history,
           prepared.question,
           prepared.prefix,
           initial.thinking ?? false,
-          latestReminder
+          latestReminder,
+          inlineFiles
         )
-        const events = streamMessage(
-          useSettings.getState().apiKey ?? '',
+        const events = streamChat(
+          { provider, apiKey: provider.apiKey },
           {
-            model: initial.model ?? MODEL,
+            model: model.id,
             system: initial.systemPrompt ?? SYSTEM_PROMPT,
             messages,
-            thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
-            safety_check: SAFETY_CHECK,
-            ...toRequestParams(
-              initial.options ?? useSettings.getState().apiOptions,
-              initial.thinking ?? false
-            ),
-            tools: serverTools(initial.search ?? false),
-            ...(titleRequests.has(controller) ? { title: { enabled: true } } : {}),
+            thinking: initial.thinking ?? false,
+            search: preset && Boolean(initial.search),
+            options: initial.options ?? useSettings.getState().apiOptions,
+            requestTitle: preset && titleRequests.has(controller),
           },
           controller.signal
         )

@@ -277,7 +277,12 @@ const SlidersOutline = ({ size }: { size: number }) => (
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <path d="M1.4 4.7H3.7M7.4 4.7H14.6" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" />
+    <path
+      d="M1.4 4.7H3.7M7.4 4.7H14.6"
+      stroke="currentColor"
+      strokeWidth={1.4}
+      strokeLinecap="round"
+    />
     <path
       d="M1.4 11.3H8.6M12.3 11.3H14.6"
       stroke="currentColor"
@@ -559,6 +564,32 @@ export const IconToastError16 = () => (
     <path
       d="M7.383 8.4c.013.406.222.61.624.61.388 0 .587-.204.597-.61l.11-3.373a.603.603 0 0 0-.194-.492.728.728 0 0 0-.527-.202.718.718 0 0 0-.52.195.622.622 0 0 0-.188.5l.098 3.371zM7.424 11.098a.849.849 0 0 0 .583.215.83.83 0 0 0 .569-.215.7.7 0 0 0 .243-.548.7.7 0 0 0-.243-.548.815.815 0 0 0-.569-.215.834.834 0 0 0-.583.222.701.701 0 0 0-.236.54c0 .218.079.4.236.549z"
       fill="currentColor"
+    />
+  </svg>
+)
+
+/** 模型：两层叠放的卡片，窄屏下作为模型选择入口的图标 */
+export const IconModelOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M8 1.9 14.1 5.2 8 8.5 1.9 5.2 8 1.9Z"
+      stroke="currentColor"
+      strokeWidth={1.3}
+      strokeLinejoin="round"
+    />
+    <path
+      d="M2.4 8.1 8 11.1l5.6-3"
+      stroke="currentColor"
+      strokeWidth={1.3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M2.4 11 8 14l5.6-3"
+      stroke="currentColor"
+      strokeWidth={1.3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     />
   </svg>
 )

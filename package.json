@@ -1,6 +1,6 @@
 {
   "name": "deepchat",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "本地优先的网页聊天客户端，可打包为安卓应用。",
   "license": "MIT",
   "private": true,
