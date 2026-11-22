@@ -98,7 +98,7 @@ def make(size: int, rounded: bool, with_bg: bool) -> Image.Image:
         # 自适应图标前景：图形缩到安全区内，背景色由 ic_launcher_background 提供
         inset = 0.20 * CANVAS
         inner = CANVAS - inset * 2
-        draw_art(draw, canvas_size, inner / CANVAS, inset, WHITE, with_eye=False)
+        draw_art(draw, canvas_size, inner / CANVAS, inset, WHITE, with_eye=True)
     return canvas.resize((size, size), Image.LANCZOS)
 
 
