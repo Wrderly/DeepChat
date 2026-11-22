@@ -133,7 +133,10 @@ export const useAnchoredPosition = <T extends HTMLElement, F extends HTMLElement
     const spaceBelow = window.innerHeight - rect.bottom - offset - VIEWPORT_PADDING
 
     if (maxHeight === undefined) {
-      const { width, height } = floating.getBoundingClientRect()
+      // 用布局尺寸而不是 getBoundingClientRect：浮层进场时可能带 scale 过渡，
+      // 量到的是缩放后的视觉尺寸，会让位置先算错再被纠正，开合动画期间明显跳一下。
+      const width = floating.offsetWidth
+      const height = floating.offsetHeight
       const resolved = resolveSide(spaceAbove, spaceBelow, side, height)
       applyPosition({
         top: resolved === 'top' ? rect.top - offset - height : rect.bottom + offset,
@@ -146,7 +149,7 @@ export const useAnchoredPosition = <T extends HTMLElement, F extends HTMLElement
     const available = Math.max(0, resolved === 'top' ? spaceAbove : spaceBelow)
     // 内容比可用空间小时按内容收口，避免浮层留出多余空白
     const height = Math.max(40, Math.min(maxHeight, available, floating.scrollHeight + 2))
-    const { width } = floating.getBoundingClientRect()
+    const width = floating.offsetWidth
     applyPosition({
       top:
         resolved === 'top'

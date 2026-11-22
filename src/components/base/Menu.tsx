@@ -56,7 +56,8 @@ export const Menu = ({
                   }}
                 >
                   <span className={styles.icon}>{option.icon}</span>
-                  {option.label}
+                  {/* 模型名可能很长：单行省略，避免菜单变宽到挤满屏幕或中途换行 */}
+                  <span className={styles.label}>{option.label}</span>
                 </div>
               ))}
             </div>,

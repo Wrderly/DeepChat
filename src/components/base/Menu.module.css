@@ -7,6 +7,7 @@
   z-index: 900;
   box-sizing: border-box;
   min-width: 124px;
+  max-width: min(320px, calc(100vw - 16px));
   padding: 4px;
   border-radius: 12px;
   background-color: var(--dsw-specific-menu);
@@ -54,7 +55,16 @@
 
 .icon {
   display: flex;
+  flex-shrink: 0;
   font-size: 16px;
+}
+
+/* 单行省略：长模型名不换行，也不把菜单撑得过宽 */
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .danger {

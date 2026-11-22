@@ -355,6 +355,11 @@ const pickWithInput = (limit: number) =>
 
 `Menu` 本身也加了进出场过渡（`src/components/base/Menu.tsx` + `Menu.module.css`）：挂载时先量好位置再切到可见态，用 `usePresence`（`src/components/base/presence.ts`）在关闭后多留 180ms 播完淡出与 0.96 → 1 的缩放，因此**模型选择浮窗**、桌面附件菜单、会话与消息的右键菜单都一起有了开合动画。模型选择按钮在展开时箭头翻转 180°。
 
+两处细节来自真机复现的问题：
+
+- 浮层的尺寸改用 `offsetWidth` / `offsetHeight` 测量（`src/components/base/anchored.ts` 的 `update()`），不再用 `getBoundingClientRect()`。后者会把进场时的 `scale(0.96)` 算进去，量到的是缩小后的尺寸，位置先算错、随后被 `ResizeObserver` 纠正，观感是浮窗弹出来闪一下又变宽变矮。
+- 菜单项文案单行省略（`.label` + `max-width: min(320px, calc(100vw - 16px))`）：模型名很长时以前会换行把菜单位高撑开，现在固定一行、超长截断。
+
 ### 7.3 文案与图标
 
 `src/i18n/zh.ts` / `src/i18n/en.ts` 各加：
