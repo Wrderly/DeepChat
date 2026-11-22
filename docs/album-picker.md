@@ -340,16 +340,20 @@ const pickWithInput = (limit: number) =>
 
 对齐官方：回形针改成**附件托盘**——点一下，功能行下方展开三个大按钮（`拍照` / `相册` / `文件`），再点一次收起。
 
-- 托盘是输入框容器内的普通块，输入框是吸底布局（`src/components/session/SessionView.module.css` 的 `.inputContainer`），托盘撑高后输入框自然上抬，正好是官方截图里「对话框上抬」的效果，不需要额外动画。
+- 托盘是输入框容器内的普通块，输入框是吸底布局（`src/components/session/SessionView.module.css` 的 `.inputContainer`），托盘撑高后输入框自然上抬，正好是官方截图里「对话框上抬」的效果。
+- 开合有过渡：托盘常驻挂载，用 `grid-template-rows: 0fr → 1fr`（200ms）过渡高度，因此高度仍由内容决定、不写死像素；内部三格同时淡入并从下方位移 4px。收起动画播完后才把 `visibility` 置为 `hidden`，避免动画期间按钮仍可聚焦。
 - 三个入口都放：`拍照` / `相册` / `文件`，与官方一致；三者共用 `pickFromSystem` 的前置检查（导入态、会话就绪、API Key）。
 - 打开托盘与唤起选择器前先 `blur()` 当前焦点，避免从选择器回来时键盘又弹起来遮住刚选好的缩略图。
 - 托盘用 `useDismiss`（`src/components/base/anchored.ts`）处理点外部关闭。
+- 系统开启「减少动态效果」（`prefers-reduced-motion: reduce`）时直接切换，不播过渡。
 
 ### 7.2 桌面端
 
 同一个回形针，用现成的 `Menu`（`src/components/base/Menu.tsx`）下拉两项「相册 / 文件」。桌面上两者最终都落到 `<input>`，只是 `accept` 不同（`image/*` vs 现有扩展名清单）。
 
 桌面不提供「拍照」：`capture` 属性在桌面浏览器上没有意义，反而会多一个打开本地摄像头选文件的入口，容易让人误解成应用内拍照。
+
+`Menu` 本身也加了进出场过渡（`src/components/base/Menu.tsx` + `Menu.module.css`）：挂载时先量好位置再切到可见态，用 `usePresence`（`src/components/base/presence.ts`）在关闭后多留 180ms 播完淡出与 0.96 → 1 的缩放，因此**模型选择浮窗**、桌面附件菜单、会话与消息的右键菜单都一起有了开合动画。模型选择按钮在展开时箭头翻转 180°。
 
 ### 7.3 文案与图标
 
@@ -414,6 +418,7 @@ const openCamera = () => void pickFromSystem(takePhoto)
 - [ ] 选择过程中旋转、切后台再回来。
 - [ ] 桌面 Chrome、Android Chrome（Web 降级）走 `accept="image/*"`。
 - [ ] 深浅色主题下托盘样式；768px 断点两侧入口不重复不缺失。
+- [ ] 托盘展开 / 收起、模型选择浮窗进出的过渡是否顺滑；系统「减少动态效果」时不应有动画。
 
 ## 10. 实施拆分
 

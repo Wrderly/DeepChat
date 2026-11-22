@@ -502,27 +502,32 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
           )}
         </div>
       </div>
-      {trayOpen && isMobile ? (
-        <div className={styles.tray}>
-          <button type="button" className={styles.trayItem} onClick={openCamera}>
-            <IconCameraOutline20 />
-            <span>{t('uploadFromCamera')}</span>
-          </button>
-          <button type="button" className={styles.trayItem} onClick={openAlbum}>
-            <IconImageOutline20 />
-            <span>{t('uploadFromAlbum')}</span>
-          </button>
-          <button
-            type="button"
-            className={styles.trayItem}
-            onClick={() => {
-              setTrayOpen(false)
-              openFilePicker()
-            }}
-          >
-            <IconFileOutline20 />
-            <span>{t('uploadFile')}</span>
-          </button>
+      {isMobile ? (
+        // 托盘常驻挂载、靠 0fr→1fr 过渡收放高度，关闭时也能播完动画
+        <div className={styles.trayClip} data-open={trayOpen ? 'true' : 'false'}>
+          <div className={styles.trayClipInner}>
+            <div className={styles.tray}>
+              <button type="button" className={styles.trayItem} onClick={openCamera}>
+                <IconCameraOutline20 />
+                <span>{t('uploadFromCamera')}</span>
+              </button>
+              <button type="button" className={styles.trayItem} onClick={openAlbum}>
+                <IconImageOutline20 />
+                <span>{t('uploadFromAlbum')}</span>
+              </button>
+              <button
+                type="button"
+                className={styles.trayItem}
+                onClick={() => {
+                  setTrayOpen(false)
+                  openFilePicker()
+                }}
+              >
+                <IconFileOutline20 />
+                <span>{t('uploadFile')}</span>
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
       {dragging ? <DragMask /> : null}

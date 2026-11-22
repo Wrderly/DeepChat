@@ -246,12 +246,53 @@
 /*
  * 移动端附件托盘：加号展开后占一行，输入框随之整体上抬。
  * 与官方一致，三个入口等宽并排在输入框下方。
+ *
+ * 托盘常驻挂载，用 grid-template-rows 0fr → 1fr 过渡高度，
+ * 因此打开与关闭都有动画，且高度仍由内容决定、不写死像素值。
  */
+.trayClip {
+  display: grid;
+  grid-template-rows: 0fr;
+  /* 收起后不可见也不可聚焦；延迟到高度动画结束再生效 */
+  visibility: hidden;
+  transition:
+    grid-template-rows 200ms var(--ds-ease-in-out),
+    visibility 0s linear 200ms;
+}
+
+.trayClip[data-open='true'] {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition: grid-template-rows 200ms var(--ds-ease-in-out);
+}
+
+.trayClipInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .tray {
   display: flex;
   flex-shrink: 0;
   gap: 8px;
   padding: 0 12px 12px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 140ms var(--ds-ease-in-out),
+    transform 200ms var(--ds-ease-in-out);
+}
+
+.trayClip[data-open='true'] .tray {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trayClip,
+  .tray {
+    transition: none;
+  }
 }
 
 .trayItem {
@@ -340,6 +381,15 @@
 .modelButton {
   max-width: 190px;
   padding-right: 8px;
+}
+
+/* 展开时箭头翻转，提示菜单状态 */
+.modelButton > svg:last-child {
+  transition: transform 200ms var(--ds-ease-in-out);
+}
+
+.modelButton[aria-expanded='true'] > svg:last-child {
+  transform: rotate(180deg);
 }
 
 .modelLabel {

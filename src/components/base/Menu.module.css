@@ -14,6 +14,25 @@
     0 0 1px rgba(0, 0, 0, 0.2),
     0 0 4px rgba(0, 0, 0, 0.02),
     0 12px 32px rgba(0, 0, 0, 0.08);
+  /* 进出场过渡：挂载即处于收起态，position 量好后再切 .menuVisible，收起时由 presence 延迟卸载 */
+  opacity: 0;
+  transform: scale(0.96);
+  transform-origin: center;
+  transition:
+    opacity 120ms var(--ds-ease-in-out),
+    transform 140ms var(--ds-ease-in-out);
+}
+
+.menuVisible {
+  opacity: 1;
+  transform: none;
+}
+
+/* 系统开启「减少动态效果」时直接显示，不做缩放 */
+@media (prefers-reduced-motion: reduce) {
+  .menu {
+    transition: none;
+  }
 }
 
 .option {

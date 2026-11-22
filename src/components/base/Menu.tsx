@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useAnchoredPosition, useDismiss } from './anchored.js'
+import { usePresence } from './presence.js'
 import styles from './Menu.module.css'
 
 export type MenuOption = {
@@ -22,9 +23,11 @@ export const Menu = ({
 }) => {
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
+  // 关闭后菜单还要多留一会儿播完收起过渡；定位与测量的依据是「是否挂载」
+  const { mounted, visible } = usePresence(open)
   // 左侧对齐并再左移 5px，让菜单文字与触发元素图标对齐
   const { anchorRef, floatingRef, position } = useAnchoredPosition<HTMLSpanElement, HTMLDivElement>(
-    open,
+    mounted,
     { align: 'start', alignOffset: -5, offset: 4 }
   )
   useDismiss(open, [anchorRef, floatingRef], close)
@@ -34,11 +37,11 @@ export const Menu = ({
       <span ref={anchorRef} className={styles.anchor}>
         {children({ open, toggle: () => setOpen((value) => !value) })}
       </span>
-      {open
+      {mounted
         ? createPortal(
             <div
               ref={floatingRef}
-              className={styles.menu}
+              className={clsx(styles.menu, visible && styles.menuVisible)}
               style={position ?? undefined}
               role="menu"
             >
