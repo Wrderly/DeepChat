@@ -243,6 +243,46 @@
   padding: 12px;
 }
 
+/*
+ * 移动端附件托盘：加号展开后占一行，输入框随之整体上抬。
+ * 与官方一致，三个入口等宽并排在输入框下方。
+ */
+.tray {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.trayItem {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 68px;
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 16px;
+  background-color: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s var(--ds-ease-in-out);
+
+  &:hover {
+    background-color: var(--dsw-alias-interactive-bg-hover);
+  }
+
+  &:active {
+    background-color: var(--dsw-alias-button-ghost-active-fill);
+  }
+}
+
 .toggles {
   display: flex;
   flex: 1;

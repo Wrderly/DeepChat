@@ -19,6 +19,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // 插件必须在 super.onCreate() 之前注册，Bridge 创建时才会带上它
+        registerPlugin(AlbumPickerPlugin.class);
         super.onCreate(savedInstanceState);
 
         if (getBridge() == null) {

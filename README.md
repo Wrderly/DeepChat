@@ -33,7 +33,7 @@ The output lives in `dist/`, ready for any static host or for the Android shell.
 - **Conversation**: streaming replies, deep thinking, smart search, link reading with source citations; stop a reply at any time and continue it when eligible. Deep thinking follows the selected model's capabilities; smart search, link reading, speech and read-aloud are provided by the built-in DeepSeek provider.
 - **Generation parameters**: thinking effort, temperature, top P, max output and stop sequences. Settings → Model parameters stores defaults for new chats; the Session settings entry at the bottom of the composer overrides or resets them per chat; a new chat can preset them before the first message.
 - **System prompt**: set per chat; the built-in prompt applies when the field is empty.
-- **Input**: multi-line composer (Enter sends, Shift+Enter adds a line), attachments by upload / paste / drag, voice input, and read-aloud replies.
+- **Input**: multi-line composer (Enter sends, Shift+Enter adds a line), attachments by upload / paste / drag, voice input, and read-aloud replies. On Android the plus button opens a camera / album / files tray; the album and camera use the system photo picker and system camera, with no storage permission.
 - **Rendering**: Markdown, syntax highlighting, KaTeX math, Mermaid diagrams and source citation cards.
 - **Interface**: Simplified Chinese and English, light / dark / follow-system themes, mobile layout and a collapsible sidebar; mobile recording shows a live spectrum on the composer's first line.
 - **Data management**: import and export history (ZIP), delete all chats.

@@ -593,3 +593,52 @@ export const IconModelOutline16 = () => (
     />
   </svg>
 )
+
+/** 附件入口：加号，展开拍照 / 相册 / 文件托盘 */
+export const IconPlusOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M8 2.6v10.8M2.6 8h10.8" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" />
+  </svg>
+)
+
+/** 附件托盘：拍照 */
+export const IconCameraOutline20 = () => (
+  <svg width={20} height={20} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M7.1 3.3h5.8l1.5 2.8H5.6l1.5-2.8Z"
+      stroke="currentColor"
+      strokeWidth={1.3}
+      strokeLinejoin="round"
+    />
+    <rect x="2.2" y="6.1" width="15.6" height="11.2" rx="2.6" stroke="currentColor" strokeWidth={1.3} />
+    <circle cx="10" cy="11.7" r="3.1" stroke="currentColor" strokeWidth={1.3} />
+  </svg>
+)
+
+/** 附件托盘 / 菜单：相册 */
+export const IconImageOutline20 = () => (
+  <svg width={20} height={20} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2.3" y="3.4" width="15.4" height="13.2" rx="2.6" stroke="currentColor" strokeWidth={1.3} />
+    <circle cx="6.9" cy="8" r="1.35" stroke="currentColor" strokeWidth={1.2} />
+    <path
+      d="m2.8 15.1 4.3-4.3a1.2 1.2 0 0 1 1.7 0l2.3 2.3 1.6-1.6a1.2 1.2 0 0 1 1.7 0l2.5 2.5"
+      stroke="currentColor"
+      strokeWidth={1.3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
+/** 附件托盘：文件 */
+export const IconFileOutline20 = () => (
+  <svg width={20} height={20} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M5.4 2.6h5.3l4.5 4.5v9.1c0 .7-.6 1.3-1.3 1.3H5.4c-.7 0-1.3-.6-1.3-1.3V3.9c0-.7.6-1.3 1.3-1.3Z"
+      stroke="currentColor"
+      strokeWidth={1.3}
+      strokeLinejoin="round"
+    />
+    <path d="M10.4 2.8v4.4h4.4" stroke="currentColor" strokeWidth={1.3} strokeLinejoin="round" />
+  </svg>
+)

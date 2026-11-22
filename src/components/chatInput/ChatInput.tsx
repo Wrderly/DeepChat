@@ -1,8 +1,13 @@
 import clsx from 'clsx'
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
+  IconCameraOutline20,
+  IconCloseOutline16,
+  IconFileOutline20,
   IconGlobeLanguageOutline14,
+  IconImageOutline20,
   IconPaperclipOutline16,
+  IconPlusOutline16,
   IconSendOutline16,
   IconSlidersOutline14,
   IconStopFill16,
@@ -30,7 +35,9 @@ import {
 } from '../../services/chat/drafts.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import { IconButton } from '../base/IconButton.js'
+import { Menu } from '../base/Menu.js'
 import { Tooltip } from '../base/Tooltip.js'
+import { useDismiss } from '../base/anchored.js'
 import { ensureChatReady, openSettings } from '../settings/settingsDialogState.js'
 import {
   deepSeekApiKey,
@@ -44,7 +51,8 @@ import { useProviders } from '../../services/providers/store.js'
 import { ApiOptionsPanel } from '../apiOptions/ApiOptionsPanel.js'
 import { DragMask, useFileDrop } from './DragMask.js'
 import { showToast } from '../base/toastState.js'
-import { ACCEPT, useUploads } from '../../services/attachments.js'
+import { ACCEPT, MAX_COUNT, useUploads } from '../../services/attachments.js'
+import { pickAlbumImages, takePhoto } from '../../services/platform/albumPicker.js'
 import { DraftAttachments } from './DraftAttachments.js'
 import { ModelPicker } from './ModelPicker.js'
 import { useComposerModel } from './composerModel.js'
@@ -161,6 +169,53 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       showToast(error)
     }
   }
+
+  const [trayOpen, setTrayOpen] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  useDismiss(trayOpen, [wrapperRef], () => setTrayOpen(false))
+
+  /**
+   * 相册与拍照：先做和文件入口相同的预检，避免选完才被要求配置 API Key。
+   * 唤起系统界面时输入框会失焦，回来时不要再把键盘弹起来挡住缩略图。
+   */
+  const pickFromSystem = async (pick: () => Promise<File[]>) => {
+    if (useChatStore.getState().importingHistory) {
+      return
+    }
+    if (!ensureChatReady() || !active) {
+      return
+    }
+    if (!active.provider.apiKey) {
+      openSettings('providers')
+      return
+    }
+    // 附件已满时不开选择器：相册和拍照至少会再加一张，直接给出与文件入口一致的提示
+    if (MAX_COUNT - attachments.length <= 0) {
+      showToast({ key: 'uploadMaxFiles', params: { count: MAX_COUNT } })
+      return
+    }
+    setTrayOpen(false)
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+    try {
+      acceptFiles(await pick())
+    } catch {
+      showToast({ key: 'uploadPickFailed' })
+    }
+  }
+  // 剩余额度作为单次选择上限，超出时仍由 validateFiles 整批提示
+  const openAlbum = () => {
+    void pickFromSystem(() => pickAlbumImages(MAX_COUNT - attachments.length))
+  }
+  const openCamera = () => {
+    void pickFromSystem(takePhoto)
+  }
+  const openFilePicker = () => {
+    if (ensureChatReady()) {
+      fileInputRef.current?.click()
+    }
+  }
   const retryFile = useCallback(
     (id: string) => {
       if (useChatStore.getState().importingHistory) {
@@ -240,6 +295,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
 
   return (
     <div
+      ref={wrapperRef}
       className={clsx(styles.wrapper, sessionId === null ? styles.home : styles.session)}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
@@ -366,14 +422,50 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               void voice.toggle()
             }}
           />
-          <IconButton
-            size="m"
-            tone="primary"
-            icon={<IconPaperclipOutline16 />}
-            tooltip={t('uploadFile')}
-            disabled={importingHistory}
-            onClick={() => ensureChatReady() && fileInputRef.current?.click()}
-          />
+          {isMobile ? (
+            // 移动端按官方形态：加号展开附件托盘，入口不再直连文件管理器
+            <IconButton
+              size="m"
+              tone="primary"
+              icon={trayOpen ? <IconCloseOutline16 /> : <IconPlusOutline16 />}
+              tooltip={t('uploadAttachments')}
+              aria-expanded={trayOpen}
+              disabled={importingHistory}
+              onClick={() => setTrayOpen((open) => !open)}
+            />
+          ) : (
+            <Menu
+              options={[
+                {
+                  key: 'album',
+                  label: t('uploadFromAlbum'),
+                  icon: <IconImageOutline20 />,
+                  onSelect: openAlbum,
+                },
+                {
+                  key: 'file',
+                  label: t('uploadFile'),
+                  icon: <IconPaperclipOutline16 />,
+                  onSelect: openFilePicker,
+                },
+              ]}
+            >
+              {({ toggle }) => (
+                <IconButton
+                  size="m"
+                  tone="primary"
+                  icon={<IconPaperclipOutline16 />}
+                  tooltip={t('uploadAttachments')}
+                  disabled={importingHistory}
+                  onClick={() => {
+                    if (ensureChatReady()) {
+                      toggle()
+                    }
+                  }}
+                />
+              )}
+            </Menu>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -410,6 +502,29 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
           )}
         </div>
       </div>
+      {trayOpen && isMobile ? (
+        <div className={styles.tray}>
+          <button type="button" className={styles.trayItem} onClick={openCamera}>
+            <IconCameraOutline20 />
+            <span>{t('uploadFromCamera')}</span>
+          </button>
+          <button type="button" className={styles.trayItem} onClick={openAlbum}>
+            <IconImageOutline20 />
+            <span>{t('uploadFromAlbum')}</span>
+          </button>
+          <button
+            type="button"
+            className={styles.trayItem}
+            onClick={() => {
+              setTrayOpen(false)
+              openFilePicker()
+            }}
+          >
+            <IconFileOutline20 />
+            <span>{t('uploadFile')}</span>
+          </button>
+        </div>
+      ) : null}
       {dragging ? <DragMask /> : null}
     </div>
   )
