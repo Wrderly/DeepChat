@@ -9,8 +9,8 @@ A local-first web chat client: chats and attachments stay on your device, and th
 Requires Node.js 22 or newer and pnpm:
 
 ```sh
-git clone https://github.com/Wrderly/DeepSeekChat.git
-cd DeepSeekChat
+git clone https://github.com/Wrderly/DeepChat.git
+cd DeepChat
 pnpm install
 pnpm dev
 ```

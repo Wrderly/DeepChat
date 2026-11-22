@@ -9,8 +9,8 @@
 需要 Node.js 22 或更高版本，以及 pnpm：
 
 ```sh
-git clone https://github.com/Wrderly/DeepSeekChat.git
-cd DeepSeekChat
+git clone https://github.com/Wrderly/DeepChat.git
+cd DeepChat
 pnpm install
 pnpm dev
 ```
