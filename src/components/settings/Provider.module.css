@@ -25,6 +25,38 @@
   line-height: 18px;
 }
 
+/* 默认提供商还没有密钥时的引导条，比普通卡片更醒目 */
+.guide {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--dsw-alias-brand-primary);
+  border-radius: 14px;
+  background-color: color-mix(in srgb, var(--dsw-alias-brand-primary) 6%, transparent);
+}
+
+.guideText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.guideTitle {
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+}
+
+.guideDescription {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .list {
   display: flex;
   flex-direction: column;
@@ -335,6 +367,16 @@
   /* 窄屏把并排字段改成上下排列，避免地址被截断 */
   .row {
     flex-direction: column;
+  }
+
+  /* 引导条在窄屏改为上下排列，按钮占满一行更好点按 */
+  .guide {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .guide > button {
+    min-height: 40px;
   }
 
   .confirmActions > button {

@@ -14,7 +14,6 @@ import { closeSearchPanel } from '../components/search/searchPanelState.js'
 import { SessionView } from '../components/session/SessionView.js'
 import { MobileHeader } from '../components/session/MobileHeader.js'
 import { Welcome } from '../components/session/Welcome.js'
-import { ensureChatReady } from '../components/settings/settingsDialogState.js'
 import { SettingsDialog } from '../components/settings/SettingsDialog.js'
 import { Toast } from '../components/base/Toast.js'
 import { showToast } from '../components/base/toastState.js'
@@ -69,8 +68,6 @@ export const App = () => {
 
   useEffect(() => {
     void initChat()
-    // 首次打开若默认提供商的密钥为空，直接跳到「模型服务」设置
-    ensureChatReady()
   }, [])
 
   return (

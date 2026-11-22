@@ -228,6 +228,10 @@ export const zh = {
   providerApiKey: 'API Key',
   providerApiKeyPlaceholder: '粘贴密钥',
   providerApiKeyRequired: '尚未填写 API Key。',
+  providerGuideTitle: '还差一步就能开始对话',
+  providerGuideDescription:
+    '为「{name}」填写 API Key，或添加一个自己的提供商；之后可在输入框里随时切换模型。',
+  providerGuideAction: '填写 API Key',
   providerModelsFetched: '已拉取 {count} 个模型。',
   providerModelCount: '{count} 个模型',
   providerModels: '模型',

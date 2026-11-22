@@ -21,9 +21,15 @@ export const ProviderSection = () => {
   const items = useProviders((state) => state.items)
   const defaultProviderId = useProviders((state) => state.defaultProviderId)
   const [editing, setEditing] = useState<ModelProvider | null>(null)
+  const [focusApiKey, setFocusApiKey] = useState(false)
   const [removing, setRemoving] = useState<ModelProvider | null>(null)
 
-  const add = () =>
+  // 默认提供商没有密钥时，说明用户还没法发消息，给出一次性引导
+  const defaultProvider = items.find((provider) => provider.id === defaultProviderId) ?? items[0]
+  const needsApiKey = defaultProvider ? !defaultProvider.apiKey : false
+
+  const add = () => {
+    setFocusApiKey(false)
     setEditing(
       createProvider({
         name: '',
@@ -33,6 +39,7 @@ export const ProviderSection = () => {
         models: [],
       })
     )
+  }
 
   return (
     <div className={styles.section}>
@@ -40,6 +47,25 @@ export const ProviderSection = () => {
         <div className={styles.title}>{t('providersTitle')}</div>
         <p className={styles.description}>{t('providersDescription')}</p>
       </div>
+      {needsApiKey && defaultProvider ? (
+        <div className={styles.guide} role="note">
+          <div className={styles.guideText}>
+            <span className={styles.guideTitle}>{t('providerGuideTitle')}</span>
+            <span className={styles.guideDescription}>
+              {t('providerGuideDescription', { name: defaultProvider.name })}
+            </span>
+          </div>
+          <Button
+            size="s"
+            onClick={() => {
+              setFocusApiKey(true)
+              setEditing(defaultProvider)
+            }}
+          >
+            {t('providerGuideAction')}
+          </Button>
+        </div>
+      ) : null}
       <div className={styles.list}>
         {items.map((provider) => {
           const isDefault = provider.id === defaultProviderId
@@ -77,7 +103,10 @@ export const ProviderSection = () => {
                 <button
                   type="button"
                   className={styles.linkButton}
-                  onClick={() => setEditing(provider)}
+                  onClick={() => {
+                    setFocusApiKey(false)
+                    setEditing(provider)
+                  }}
                 >
                   {t('providerEdit')}
                 </button>
@@ -107,7 +136,16 @@ export const ProviderSection = () => {
       <Button variant="outlined" size="m" className={styles.addButton} onClick={add}>
         + {t('providerAdd')}
       </Button>
-      {editing ? <ProviderEditor initial={editing} onClose={() => setEditing(null)} /> : null}
+      {editing ? (
+        <ProviderEditor
+          initial={editing}
+          focusApiKey={focusApiKey}
+          onClose={() => {
+            setEditing(null)
+            setFocusApiKey(false)
+          }}
+        />
+      ) : null}
       {removing ? (
         <Modal title={t('providerDeleteTitle')} closable onClose={() => setRemoving(null)}>
           <p className={styles.confirmText}>{t('providerDeleteDescription')}</p>

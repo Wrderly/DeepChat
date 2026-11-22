@@ -244,6 +244,10 @@ export const en = {
   providerApiKey: 'API Key',
   providerApiKeyPlaceholder: 'Paste the key',
   providerApiKeyRequired: 'No API key yet.',
+  providerGuideTitle: 'One step before you can chat',
+  providerGuideDescription:
+    'Add an API key for “{name}”, or add your own provider. You can switch models from the composer afterwards.',
+  providerGuideAction: 'Add API key',
   providerModelsFetched: 'Fetched {count} models.',
   providerModelCount: '{count} models',
   providerModels: 'Models',

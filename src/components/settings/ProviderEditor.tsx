@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslate, type TranslationKey, type TranslationMessage } from '../../i18n/index.js'
 import { ApiError } from '../../services/api/client.js'
 import { fetchProviderModels } from '../../services/providers/api.js'
@@ -75,12 +75,15 @@ type Draft = {
 export const ProviderEditor = ({
   initial,
   onClose,
+  focusApiKey = false,
 }: {
   initial: ModelProvider
   onClose: () => void
+  focusApiKey?: boolean
 }) => {
   const t = useTranslate()
   const builtin = isBuiltinProvider(initial)
+  const apiKeyRef = useRef<HTMLInputElement>(null)
   const [draft, setDraft] = useState<Draft>(() => ({
     name: initial.name,
     protocol: initial.protocol,
@@ -101,6 +104,13 @@ export const ProviderEditor = ({
   const [advanced, setAdvanced] = useState(Boolean(draft.extraHeaders || draft.extraBody))
 
   const update = (patch: Partial<Draft>) => setDraft((value) => ({ ...value, ...patch }))
+
+  // 从「填写 API Key」引导进来时直接聚焦密钥输入，省去查找
+  useEffect(() => {
+    if (focusApiKey) {
+      apiKeyRef.current?.focus()
+    }
+  }, [focusApiKey])
 
   const updateModel = (index: number, patch: Partial<ProviderModel>) =>
     setDraft((value) => ({
@@ -327,6 +337,7 @@ export const ProviderEditor = ({
         <label className={styles.field}>
           <span className={styles.fieldLabel}>{t('providerApiKey')}</span>
           <input
+            ref={apiKeyRef}
             className={styles.input}
             type="password"
             value={draft.apiKey}
