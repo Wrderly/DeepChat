@@ -105,9 +105,9 @@ public class AlbumPickerPlugin extends Plugin {
                     getContext(), getContext().getPackageName() + ".fileprovider", output);
             Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE)
                     .putExtra(MediaStore.EXTRA_OUTPUT, uri)
-                    .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    // 部分相机应用只认 ClipData 里的授权，EXTRA_OUTPUT 单独给不够
-                    .setClipData(ClipData.newRawUri("", uri));
+                    .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            // 部分相机应用只认 ClipData 里的授权，EXTRA_OUTPUT 单独给不够；setClipData 返回 void，不能串在构造链上
+            intent.setClipData(ClipData.newRawUri("", uri));
             pendingPhoto = output;
             try {
                 startActivityForResult(call, intent, "onPhotoTaken");
