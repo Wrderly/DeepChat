@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'com.wrderly.deepseekchat',
+  appId: 'com.wrderly.deepchat',
   appName: 'DeepChat',
   webDir: 'dist',
   android: {

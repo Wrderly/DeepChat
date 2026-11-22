@@ -15,10 +15,10 @@ if (hasReleaseKeystore) {
 }
 
 android {
-    namespace = "com.wrderly.deepseekchat"
+    namespace = "com.wrderly.deepchat"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.wrderly.deepseekchat"
+        applicationId "com.wrderly.deepchat"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode

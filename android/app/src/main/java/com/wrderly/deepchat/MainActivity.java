@@ -1,4 +1,4 @@
-package com.wrderly.deepseekchat;
+package com.wrderly.deepchat;
 
 import android.os.Bundle;
 import android.webkit.WebView;

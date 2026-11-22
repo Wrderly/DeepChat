@@ -93,6 +93,8 @@ android/               Capacitor Android project
 
 The repo ships a [Capacitor](capacitor.config.ts) shell (`android/`) plus a GitHub Actions pipeline that produces a sideloadable APK.
 
+The application ID is `com.wrderly.deepchat`. Earlier sideloads used `com.wrderly.deepseekchat`, which Android treats as a separate app: export your history, uninstall the old build, then install the new APK.
+
 ```sh
 pnpm build                 # build the web bundle into dist/
 pnpm android:sync          # copy it into android/app/src/main/assets

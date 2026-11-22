@@ -93,6 +93,8 @@ android/               Capacitor 安卓工程
 
 仓库包含一套 [Capacitor](capacitor.config.ts) 壳（`android/`）和 GitHub Actions 构建流程，产物是可直接侧载的 APK。
 
+应用包名（applicationId）为 `com.wrderly.deepchat`；此前的安装包使用 `com.wrderly.deepseekchat`，安卓会视为另一个应用：请先导出历史，卸载旧版后再安装新版。
+
 ```sh
 pnpm build                 # 构建网页产物到 dist/
 pnpm android:sync          # 复制到 android/app/src/main/assets
