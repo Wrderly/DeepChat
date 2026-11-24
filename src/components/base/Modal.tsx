@@ -87,13 +87,16 @@ export const Modal = ({
 
   return createPortal(
     <div
-      className={clsx(
-        styles.overlay,
-        sheetMode && styles.overlaySheet,
-        shown && !closing && styles.overlayVisible
-      )}
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+      className={clsx(styles.overlay, sheetMode && styles.overlaySheet, closing && styles.overlayClosing)}
     >
+      <div
+        className={clsx(
+          styles.scrim,
+          shown && !closing && styles.scrimVisible,
+          closing && styles.scrimClosing
+        )}
+        onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+      />
       <div
         className={clsx(
           styles.content,

@@ -68,6 +68,8 @@
   margin-right: -24px;
   padding: 0 24px;
   overflow-y: auto;
+  /* 各分组高度不同，滚动条时有时无；固定预留槽位，切换页签时内容不再左右跳一下 */
+  scrollbar-gutter: stable;
 }
 
 .cell {

@@ -1,28 +1,51 @@
 .overlay {
   --overlay-opacity: 0.36;
+  --overlay-fade: 160ms;
   position: fixed;
   inset: 0;
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, var(--overlay-opacity));
-  backdrop-filter: blur(2px);
-  opacity: 0;
-  transition: opacity 160ms var(--ds-ease-in-out);
 
   [data-ds-dark-theme] & {
     --overlay-opacity: 0.6;
   }
 }
 
-.overlayVisible {
+/**
+ * 遮罩和弹窗内容分成两层：遮罩带全屏 backdrop-filter，必须自己一块合成层。
+ * 两者共用一层时，弹窗里任何重绘（切页签、列表滚动、输入框高亮）都会把整屏的模糊重算一遍。
+ */
+.scrim {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, var(--overlay-opacity));
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity var(--overlay-fade) var(--ds-ease-in-out);
+}
+
+.scrimVisible {
   opacity: 1;
 }
 
 /* 底部抽屉的遮罩跟着抽屉一起变慢，避免抽屉还在滑、背景已经黑掉 */
 .overlaySheet {
-  transition-duration: 300ms;
+  --overlay-fade: 300ms;
+}
+
+/* 关闭态：下面已经点不到了，别让透明遮罩继续吃点击 */
+.overlayClosing {
+  pointer-events: none;
+}
+
+/* 淡出结束后把遮罩真正藏起来，全屏模糊随之停止按帧计算 */
+.scrimClosing {
+  visibility: hidden;
+  transition:
+    opacity var(--overlay-fade) var(--ds-ease-in-out),
+    visibility 0s linear var(--overlay-fade);
 }
 
 .content {
@@ -42,12 +65,16 @@
     0 0 1px 0 rgba(0, 0, 0, 0.2),
     0 0 4px 0 rgba(0, 0, 0, 0.02),
     0 12px 32px 0 rgba(0, 0, 0, 0.08);
-  transform: translateY(6px) scale(0.985);
-  transition: transform 180ms var(--ds-ease-in-out);
+  transform: translateY(6px);
+  opacity: 0;
+  transition:
+    transform 180ms var(--ds-ease-in-out),
+    opacity var(--overlay-fade) var(--ds-ease-in-out);
 }
 
 .contentVisible {
   transform: none;
+  opacity: 1;
 }
 
 /* 拖动时跟随手指，不做过渡 */
@@ -95,12 +122,16 @@
   .contentSheet {
     transform: translateY(100%);
     /* 收起时先用较缓的起步，再加速离场，避免一松手就消失 */
-    transition: transform 280ms cubic-bezier(0.4, 0, 1, 1);
+    transition:
+      transform 280ms cubic-bezier(0.4, 0, 1, 1),
+      opacity var(--overlay-fade) var(--ds-ease-in-out);
   }
 
   .contentSheet.contentVisible {
     transform: none;
-    transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+    transition:
+      transform 300ms cubic-bezier(0.32, 0.72, 0, 1),
+      opacity var(--overlay-fade) var(--ds-ease-in-out);
   }
 
   /* 按住标题栏拖动时不要触发页面滚动，否则浏览器会取消 pointermove */
@@ -112,7 +143,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .overlay,
+  .scrim,
+  .scrimClosing,
   .overlaySheet,
   .content,
   .contentSheet {
