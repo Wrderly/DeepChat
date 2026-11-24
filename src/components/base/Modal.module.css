@@ -14,15 +14,16 @@
 }
 
 /**
- * 遮罩和弹窗内容分成两层：遮罩带全屏 backdrop-filter，必须自己一块合成层。
- * 两者共用一层时，弹窗里任何重绘（切页签、列表滚动、输入框高亮）都会把整屏的模糊重算一遍。
+ * 遮罩和弹窗内容分成两层。
+ * 遮罩只做纯色压暗：全屏 backdrop-filter 没法烘焙，透明度渐变的每一帧都要把整屏重新模糊一遍，
+ * 手机上每帧成本高、掉帧后表现为整屏亮度跳一下。侧边栏抽屉、会话设置、模型浮窗都没有模糊，
+ * 这里对齐成同样的做法，只让该动的那块动。
  */
 .scrim {
   position: absolute;
   inset: 0;
   z-index: 0;
   background-color: rgba(0, 0, 0, var(--overlay-opacity));
-  backdrop-filter: blur(2px);
   opacity: 0;
   transition: opacity var(--overlay-fade) var(--ds-ease-in-out);
 }
@@ -41,7 +42,7 @@
   pointer-events: none;
 }
 
-/* 淡出结束后把遮罩真正藏起来，全屏模糊随之停止按帧计算 */
+/* 淡出结束后把遮罩真正藏起来，透明像素不再参与合成 */
 .scrimClosing {
   visibility: hidden;
   transition:
@@ -51,7 +52,7 @@
 
 .content {
   /* 遮罩是定位元素、这里不是，光靠文档顺序遮罩会盖在弹窗上面：
-     必须显式抬到遮罩之上，否则整屏模糊会把弹窗一起糊住、点击也落在遮罩上 */
+     必须显式抬到遮罩之上，否则遮罩会盖住弹窗、点击也落在遮罩上 */
   position: relative;
   z-index: 1;
   display: flex;
