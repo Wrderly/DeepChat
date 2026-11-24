@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslate } from '../i18n/index.js'
 import { useSettings } from '../services/settings.js'
 import { useIsMobile, useMobileViewport, usePreventPageScroll } from './viewport.js'
@@ -51,6 +51,26 @@ export const App = () => {
 
   usePreventPageScroll(isMobile)
 
+  const loading = !ready || (activeId !== null && !session)
+  const loadFailed = !ready ? initError : sessionLoadError
+  const [showLoadingHint, setShowLoadingHint] = useState(false)
+
+  // 冷启动通常几十毫秒就绪，立刻渲染「正在加载对话...」会白闪一行小字再切走；
+  // 延迟一小段再显示，正常启动时用户只看到背景直接过渡到页面。
+  // 切换会话时（ready 已为真）仍然立即显示，避免点开对话后空白一片。
+  useEffect(() => {
+    if (!loading || loadFailed || ready) {
+      setShowLoadingHint(false)
+      return
+    }
+    const timer = setTimeout(() => setShowLoadingHint(true), 240)
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [loading, loadFailed, ready])
+
+  const showLoadingState = loadFailed || showLoadingHint || (loading && ready)
+
   useEffect(() => {
     document.documentElement.lang = locale
   }, [locale])
@@ -90,31 +110,33 @@ export const App = () => {
           ) : null}
           <div className={styles.content}>
             {siderCollapsed ? <CollapsedSider /> : null}
-            {!ready || (activeId !== null && !session) ? (
+            {loading ? (
               <div className={styles.loadingView}>
                 {isMobile ? <MobileHeader /> : null}
-                <div className={styles.loadingState} role="status" aria-live="polite">
-                  <span>
-                    {(!ready ? initError : sessionLoadError)
-                      ? t(!ready ? 'sessionListLoadFailed' : 'sessionLoadFailed')
-                      : t('sessionLoading')}
-                  </span>
-                  {(!ready ? initError : sessionLoadError) ? (
-                    <Button
-                      variant="outlined"
-                      size="m"
-                      onClick={() => {
-                        if (!ready) {
-                          void initChat()
-                        } else if (activeId !== null) {
-                          selectSession(activeId)
-                        }
-                      }}
-                    >
-                      {t('retry')}
-                    </Button>
-                  ) : null}
-                </div>
+                {showLoadingState ? (
+                  <div className={styles.loadingState} role="status" aria-live="polite">
+                    <span>
+                      {loadFailed
+                        ? t(!ready ? 'sessionListLoadFailed' : 'sessionLoadFailed')
+                        : t('sessionLoading')}
+                    </span>
+                    {loadFailed ? (
+                      <Button
+                        variant="outlined"
+                        size="m"
+                        onClick={() => {
+                          if (!ready) {
+                            void initChat()
+                          } else if (activeId !== null) {
+                            selectSession(activeId)
+                          }
+                        }}
+                      >
+                        {t('retry')}
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ) : session ? (
               <SessionView

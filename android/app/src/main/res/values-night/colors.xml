@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色模式窗口底色：与网页端 dsw-alias-bg-base 的深色值 rgb(21,21,23) 一致 -->
+    <color name="app_background">#151517</color>
+</resources>

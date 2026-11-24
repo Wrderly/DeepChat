@@ -5,6 +5,43 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="theme-color" content="#ffffff" />
     <title>DeepChat</title>
+    <!--
+      首帧底色：应用样式表还在下载、脚本还没执行时，浏览器也会先按下面的规则画一次背景。
+      只按系统深浅色取值，和 theme.css 里的 --dsw-alias-bg-base 保持一致（白 / rgb(21,21,23)）。
+    -->
+    <style>
+      html {
+        background-color: #ffffff;
+        color-scheme: light;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        html {
+          background-color: #151517;
+          color-scheme: dark;
+        }
+      }
+    </style>
+    <script>
+      // 本机保存过明/暗偏好时以它为准；这里同步执行，赶在首次绘制之前把画布刷成最终颜色，
+      // 否则深色模式会先闪一帧白（样式表里的深色令牌要等 React 启动后才挂到 body 上）。
+      ;(function () {
+        try {
+          var preference = localStorage.getItem('deepchat:theme-preference')
+          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          var dark = preference === 'dark' || (preference !== 'light' && systemDark)
+          var color = dark ? '#151517' : '#ffffff'
+          document.documentElement.style.backgroundColor = color
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta) {
+            meta.setAttribute('content', color)
+          }
+        } catch (error) {
+          // 读不到偏好时保留上面按系统深浅色写的默认值
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

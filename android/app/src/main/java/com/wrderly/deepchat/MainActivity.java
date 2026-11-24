@@ -2,6 +2,7 @@ package com.wrderly.deepchat;
 
 import android.os.Bundle;
 import android.webkit.WebView;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -27,6 +28,9 @@ public class MainActivity extends BridgeActivity {
             return;
         }
         final WebView webView = getBridge().getWebView();
+        // WebView 自己铺一层和窗口一致的底色（随系统深浅色取值）：页面画出第一帧之前
+        // 不会露出白底，深色模式下也就没有那一下闪白。
+        webView.setBackgroundColor(ContextCompat.getColor(this, R.color.app_background));
 
         ViewCompat.setOnApplyWindowInsetsListener(webView, (view, windowInsets) -> {
             Insets bars = windowInsets.getInsets(

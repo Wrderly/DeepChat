@@ -22,7 +22,9 @@ body {
   font-family: var(--dsw-font-family);
   font-size: var(--ds-font-size-m);
   color: var(--dsw-alias-label-primary);
-  background-color: var(--dsw-alias-bg-base);
+  /* 主题类挂上之前保持透明，露出一层 html 早在首次绘制前就刷好的底色（见 index.html 内联脚本），
+     否则深色模式会先白后黑闪一下；挂上 .light / .dark 后由下面的规则接管。 */
+  background-color: transparent;
   -webkit-text-size-adjust: none;
   -webkit-tap-highlight-color: transparent;
   font-feature-settings: 'kern';
@@ -31,6 +33,11 @@ body {
 
   --scroll-color: rgba(0, 0, 0, 0.08);
   --scroll-color-hover: rgba(0, 0, 0, 0.15);
+}
+
+body.light,
+body.dark {
+  background-color: var(--dsw-alias-bg-base);
 }
 
 body.dark {

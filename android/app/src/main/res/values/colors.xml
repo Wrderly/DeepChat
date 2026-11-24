@@ -4,4 +4,6 @@
     <color name="colorPrimary">#3964FE</color>
     <color name="colorPrimaryDark">#2B49C4</color>
     <color name="colorAccent">#3964FE</color>
+    <!-- 窗口底色：与网页端 dsw-alias-bg-base 的浅色值一致；深色值见 values-night/colors.xml -->
+    <color name="app_background">#FFFFFF</color>
 </resources>
