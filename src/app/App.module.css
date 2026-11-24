@@ -64,4 +64,10 @@
     bottom: auto;
     height: var(--app-viewport-height, 100dvh);
   }
+
+  @supports not (height: 100dvh) {
+    .frame {
+      --app-viewport-height: 100vh;
+    }
+  }
 }

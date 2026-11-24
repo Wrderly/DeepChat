@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getAbortReason, throwIfAborted } from '../../utils/abort.js'
 import { createId } from '../../utils/id.js'
 import { resizeUploadImage } from '../../utils/resizeUploadImage.js'
 import { streamChat } from '../api/chat.js'
@@ -1087,7 +1088,7 @@ const prepareFiles = async (
   const serverIds = new Map<string, string>()
   // 停止生成立即生效；上传本身不取消（输入框与其他消息可能共用同一任务），完成后照常写回 serverId
   const aborted = new Promise<never>((_, reject) => {
-    signal.addEventListener('abort', () => reject(signal.reason), { once: true })
+    signal.addEventListener('abort', () => reject(getAbortReason(signal)), { once: true })
   })
   // 旧图片超限时先清除 ID，交给下方已有的附件补传流程。
   const files = [
@@ -1119,7 +1120,7 @@ const prepareFiles = async (
   }
 
   const pending = new Map<string, FileAttachment>()
-  for (const [user] of getContextRounds(request.history).toReversed()) {
+  for (const [user] of getContextRounds(request.history).reverse()) {
     for (const file of user.files) {
       if (!file.serverId && !serverIds.has(file.id) && !pending.has(file.id)) {
         pending.set(file.id, file)
@@ -1127,7 +1128,7 @@ const prepareFiles = async (
     }
   }
   for (const file of pending.values()) {
-    signal.throwIfAborted()
+    throwIfAborted(signal)
     try {
       const serverId = await Promise.race([ensureServerId(apiKey, file), aborted])
       if (serverId) {
@@ -1135,7 +1136,7 @@ const prepareFiles = async (
         saveServerIds(sessionId, new Map([[file.id, serverId]]))
       }
     } catch {
-      signal.throwIfAborted()
+      throwIfAborted(signal)
     }
   }
 
@@ -1262,14 +1263,14 @@ const loadInlineFiles = async (request: Request, signal: AbortSignal): Promise<I
       if (!file.isImage || inline.has(file.id)) {
         continue
       }
-      signal.throwIfAborted()
+      throwIfAborted(signal)
       try {
         const value = await readInlineFile(file, signal)
         if (value) {
           inline.set(file.id, value)
         }
       } catch {
-        signal.throwIfAborted()
+        throwIfAborted(signal)
       }
     }
   }
