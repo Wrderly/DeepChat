@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    系统启动画面（Android 12+）的图标：完全透明的形状，等于把图标去掉，只留底色。
+    这里不能写 @null —— 那样系统会当成"没配置"而回退到应用图标，所以给一个确实存在的透明 drawable。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+</shape>

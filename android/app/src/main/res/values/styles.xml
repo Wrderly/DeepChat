@@ -21,13 +21,15 @@
 
     <!--
         启动主题：原来铺的是一张白底 logo 位图，深色模式下必然先闪一屏白。
-        改成纯色窗口底色后，系统启动画面（Android 12+ 会自动叠应用图标）与 WebView
-        加载时的空白都取同一个颜色，网页那边再按同样的色值画首帧，整条链路没有跳色。
+        改成纯色窗口底色后，系统启动画面与 WebView 加载时的空白都取同一个颜色，
+        网页那边再按同样的色值画首帧，整条链路没有跳色。
     -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@null</item>
         <item name="android:windowBackground">@color/app_background</item>
         <!-- Android 12+ 系统启动画面的底色；低版本没有这个属性，会被忽略 -->
         <item name="android:windowSplashScreenBackground">@color/app_background</item>
+        <!-- 启动画面不放图标，只有底色；透明 drawable 见 res/drawable/empty_splash_icon.xml -->
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/empty_splash_icon</item>
     </style>
 </resources>
