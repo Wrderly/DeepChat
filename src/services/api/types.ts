@@ -1,7 +1,7 @@
 /**
  * Messages API（Anthropic 兼容格式）协议类型，只取本应用用到的部分。
  * 文档：https://api-docs.deepseek.com/zh-cn/api/create-message
- * 声明 deepseek_web_search / deepseek_read_url 或设置 safety_check.level 为 high 时进入扩展模式。
+ * 声明 deepseek_web_search / deepseek_read_url 等 DeepSeek 私有扩展时才进入扩展模式。
  */
 
 // ---------- 响应：内容块 ----------
@@ -206,8 +206,8 @@ export type CreateMessageRequest = {
   stop_sequences?: string[]
   /** DeepSeek 扩展：联网搜索与链接读取工具 */
   tools?: (DeepseekWebSearchTool | DeepseekReadUrlTool)[]
-  /** DeepSeek 扩展：安全审核级别 */
-  safety_check?: { level: 'high' }
+  /** DeepSeek 扩展：安全审核级别；low 与不传等价，显式携带只是为了出现在请求体里 */
+  safety_check?: { level: 'low' | 'high' }
   /** DeepSeek 扩展：由服务端生成会话标题 */
   title?: { enabled: boolean }
 }

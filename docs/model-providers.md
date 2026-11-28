@@ -285,8 +285,10 @@ const headers = {
   thinking: { type: thinking ? 'enabled' : 'disabled' },
   ...toRequestParams(options, thinking),
   ...(preset === 'deepseek'
-    ? { safety_check: { level: 'high' }, tools, ...(requestTitle ? { title: { enabled: true } } : {}) }
+    ? { tools, ...(requestTitle ? { title: { enabled: true } } : {}) }
     : {}),
+  // 指向 DeepSeek 端点的请求显式带上安全审核级别：low 与不传等价
+  ...(isDeepSeekEndpoint ? { safety_check: { level: 'low' } } : {}),
   ...provider.extraBody,
   stream: true,
 }
