@@ -1,6 +1,7 @@
 import type { TranslationMessage } from '../../i18n/index.js'
 import type { ApiErrorKind } from '../api/client.js'
 import type { ApiOptions } from '../api/options.js'
+import type { SafetyCheckLevel } from '../api/safety.js'
 import type {
   MessageUsage,
   ServerToolBlock,
@@ -84,6 +85,8 @@ export type AssistantMessage = MessageBranch & {
   thinking?: boolean
   /** 请求时是否声明 deepseek_web_search；关闭时仍声明 deepseek_read_url */
   search?: boolean
+  /** 本轮请求使用的安全审核级别快照；缺省表示按当时的会话/默认设置请求 */
+  safetyCheck?: SafetyCheckLevel
   /** 本轮请求使用的生成参数快照，续写与重新生成各自独立；历史消息中缺省表示按默认值请求 */
   options?: ApiOptions
   /** 本轮请求使用的系统提示词快照；缺省表示使用内置默认提示词 */
@@ -123,6 +126,8 @@ export type Session = {
   rootMessageId?: string | null
   /** 会话级生成参数；缺省时跟随设置页里的默认值 */
   options?: ApiOptions
+  /** 会话级安全审核级别；缺省时跟随设置页里的默认值 */
+  safetyCheck?: SafetyCheckLevel
   /** 会话级系统提示词；缺省时使用内置默认提示词 */
   systemPrompt?: string
   /** 会话当前选择的模型；缺省时使用全局默认模型 */

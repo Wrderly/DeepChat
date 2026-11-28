@@ -1,8 +1,9 @@
 import { toRequestParams } from './options.js'
+import { toSafetyCheckFields } from './safety.js'
 import { readMessageEvent } from './parseEvent.js'
 import { ApiError, FILES_BETA, readErrorResponse, request } from './client.js'
 import { readServerSentEvents } from './sse.js'
-import { isPresetProvider, joinUrl, type ChatRequest, type ChatTarget } from './adapter.js'
+import { isDeepSeekEndpoint, isPresetProvider, joinUrl, type ChatRequest, type ChatTarget } from './adapter.js'
 import type { CreateMessageRequest, MessageParam, MessageStreamEvent } from './types.js'
 
 /** Anthropic 协议的 max_tokens 是必填项；DeepSeek 预设不传，沿用服务端默认 */
@@ -44,21 +45,9 @@ const hasFile = (messages: MessageParam[]): boolean =>
       message.content.some((block) => block.type === 'image' || block.type === 'document')
   )
 
-/** DeepSeek 官方端点：安全审核字段只在官方域名上有效，中转站收到未知字段会直接 400 */
-const isDeepSeekEndpoint = (target: ChatTarget): boolean => {
-  if (isPresetProvider(target)) {
-    return true
-  }
-  try {
-    return new URL(target.provider.baseUrl).hostname === 'api.deepseek.com'
-  } catch {
-    return false
-  }
-}
-
 /**
  * POST {baseUrl}{apiPath}（Anthropic Messages 兼容），逐个产出内部流式事件。
- * 内置 DeepSeek 额外发送工具与标题扩展；DeepSeek 端点显式声明 safety_check.level 为 low。
+ * 内置 DeepSeek 额外发送工具与标题扩展；DeepSeek 端点按设置发送 safety_check。
  * 自定义提供商只发送标准字段。
  */
 export async function* streamAnthropic(
@@ -67,7 +56,7 @@ export async function* streamAnthropic(
   signal: AbortSignal
 ): AsyncGenerator<MessageStreamEvent> {
   const preset = isPresetProvider(target)
-  const deepseek = isDeepSeekEndpoint(target)
+  const deepseek = isDeepSeekEndpoint(target.provider)
   const { messages, system } = preset
     ? { messages: chatRequest.messages, system: chatRequest.system }
     : mergeReminder(chatRequest.messages, chatRequest.system)
@@ -77,8 +66,8 @@ export async function* streamAnthropic(
     messages,
     thinking: { type: chatRequest.thinking ? 'enabled' : 'disabled' },
     ...toRequestParams(chatRequest.options, chatRequest.thinking),
-    // 显式带上安全审核级别：low 与不传等价，只是让请求里出现该字段而不是省略
-    ...(deepseek ? { safety_check: { level: 'low' as const } } : {}),
+    // 安全审核级别由设置决定：low/high 显式携带，不传则不出现该字段
+    ...(deepseek ? toSafetyCheckFields(chatRequest.safetyCheck) : {}),
     ...(preset
       ? {
           tools: serverTools(chatRequest.search),

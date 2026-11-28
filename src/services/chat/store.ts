@@ -5,6 +5,7 @@ import { resizeUploadImage } from '../../utils/resizeUploadImage.js'
 import { streamChat } from '../api/chat.js'
 import { ApiError } from '../api/client.js'
 import type { ApiOptions } from '../api/options.js'
+import type { SafetyCheckLevel } from '../api/safety.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
 import {
   cancelUpload,
@@ -267,13 +268,13 @@ export const bindChatPersistence = () => {
 
 /**
  * 按当前开关创建回复：深度思考对应 thinking，智能搜索只在 DeepSeek 提供商下开启，
- * 参数取会话覆盖值或设置页默认值；模型不可用时保留快照，由请求阶段给出提示。
+ * 参数与安全审核级别取会话覆盖值或设置页默认值；模型不可用时保留快照，由请求阶段给出提示。
  */
 const createReply = (
-  session: Pick<Session, 'options' | 'systemPrompt'> | null | undefined,
+  session: Pick<Session, 'options' | 'safetyCheck' | 'systemPrompt'> | null | undefined,
   requested: ModelRef | null
 ): AssistantMessage => {
-  const { thinking, search, apiOptions } = useSettings.getState()
+  const { thinking, search, apiOptions, safetyCheck } = useSettings.getState()
   const resolved = resolveModel(requested)
   return {
     id: createId(),
@@ -283,6 +284,7 @@ const createReply = (
     thinking: Boolean(thinking && (!resolved || modelSupports(resolved.model, 'thinking'))),
     search: Boolean(search && isDeepSeekProvider(resolved?.provider)),
     options: session?.options ?? apiOptions,
+    safetyCheck: session?.safetyCheck ?? safetyCheck,
     systemPrompt: session?.systemPrompt,
     prefix: true,
     status: 'pending',
@@ -592,6 +594,24 @@ export const setSessionApiOptions = (sessionId: string, options: ApiOptions | un
   scheduleSessionSave(sessionId)
 }
 
+/** 会话级安全审核级别：覆盖设置页默认值，传 undefined 恢复跟随默认值；不改变会话的更新顺序 */
+export const setSessionSafetyCheck = (
+  sessionId: string,
+  safetyCheck: SafetyCheckLevel | undefined
+) => {
+  if (get().importingHistory || deletingSessions.has(sessionId) || !getSession(sessionId)) {
+    return
+  }
+  updateSession(sessionId, (session) => {
+    const next: Session = { ...session, safetyCheck }
+    if (!safetyCheck) {
+      delete next.safetyCheck
+    }
+    return next
+  })
+  scheduleSessionSave(sessionId)
+}
+
 /** 会话级系统提示词：空白视为未设置，回到内置默认提示词；不改变会话的更新顺序 */
 export const setSessionSystemPrompt = (sessionId: string, prompt: string) => {
   if (get().importingHistory || deletingSessions.has(sessionId) || !getSession(sessionId)) {
@@ -621,7 +641,7 @@ export const setSessionModel = (sessionId: string, model: ModelRef) => {
 
 /**
  * 提交指定会话的最新草稿；null 表示新建会话。
- * options、systemPrompt、model 只在新建会话时写入，作为该会话第一条消息的初始设置；
+ * options、safetyCheck、systemPrompt、model 只在新建会话时写入，作为该会话第一条消息的初始设置；
  * 已有会话传入 model 时同时更新会话选择的模型。
  * 同步接收成功才清空草稿，附件原件由会话接管；保存失败仍通过保存入口重试。
  */
@@ -629,7 +649,8 @@ export const sendMessage = (
   targetSessionId: string | null,
   options?: ApiOptions,
   systemPrompt?: string,
-  model?: ModelRef | null
+  model?: ModelRef | null,
+  safetyCheck?: SafetyCheckLevel
 ) => {
   if (get().importingHistory || !get().ready) {
     return false
@@ -660,6 +681,7 @@ export const sendMessage = (
       messages: [],
       rootMessageId: null,
       ...(options ? { options } : {}),
+      ...(safetyCheck ? { safetyCheck } : {}),
       ...(systemPrompt ? { systemPrompt } : {}),
       model: requested,
     }
@@ -913,6 +935,7 @@ export const branchSession = (sessionId: string, messageId: string): string | nu
     messages,
     rootMessageId: ids[0] ?? null,
     ...(session.options ? { options: session.options } : {}),
+    ...(session.safetyCheck ? { safetyCheck: session.safetyCheck } : {}),
     ...(session.systemPrompt ? { systemPrompt: session.systemPrompt } : {}),
   }
   touchSession(branch.id)
@@ -957,7 +980,7 @@ export const continueReply = (sessionId: string, messageId: string) => {
   ) {
     return
   }
-  const { thinking, search, apiOptions } = useSettings.getState()
+  const { thinking, search, apiOptions, safetyCheck } = useSettings.getState()
   const reply: AssistantMessage = {
     ...previous,
     // 原模型被删除时改用会话当前模型，两者都不可用时保留旧快照，请求阶段给出提示。
@@ -967,6 +990,7 @@ export const continueReply = (sessionId: string, messageId: string) => {
     thinking: previous.thinking ?? thinking,
     search: previous.search ?? search,
     options: previous.options ?? session.options ?? apiOptions,
+    safetyCheck: previous.safetyCheck ?? session.safetyCheck ?? safetyCheck,
     systemPrompt: previous.systemPrompt ?? session.systemPrompt,
     status: 'pending',
     stopReason: undefined,
@@ -1354,6 +1378,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             thinking: initial.thinking ?? false,
             search: preset && Boolean(initial.search),
             options: initial.options ?? useSettings.getState().apiOptions,
+            safetyCheck: initial.safetyCheck ?? useSettings.getState().safetyCheck,
             requestTitle: preset && titleRequests.has(controller),
           },
           controller.signal

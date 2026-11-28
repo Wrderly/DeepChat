@@ -26,6 +26,7 @@ import {
   setApiOptions,
   setLocale,
   setLocation,
+  setSafetyCheck,
   setThemePreference,
   setTtsVoice,
   useSettings,
@@ -33,6 +34,7 @@ import {
 } from '../../services/settings.js'
 import { useTranslate, type TranslationKey, type TranslationMessage } from '../../i18n/index.js'
 import { ApiOptionsControls } from '../apiOptions/ApiOptionsControls.js'
+import { SafetyCheckField } from '../apiOptions/SafetyCheckField.js'
 import { Button } from '../base/Button.js'
 import { Modal } from '../base/Modal.js'
 import { usePresence } from '../base/presence.js'
@@ -166,10 +168,11 @@ const SettingsContent = ({
   )
 }
 
-/** 新对话默认使用的生成参数；单个会话可以在输入框的参数浮层里覆盖 */
+/** 新对话默认使用的生成参数与安全审核级别；单个会话可以在输入框的参数浮层里覆盖 */
 const ModelSetting = () => {
   const t = useTranslate()
   const apiOptions = useSettings((state) => state.apiOptions)
+  const safetyCheck = useSettings((state) => state.safetyCheck)
   return (
     <div className={apiStyles.group}>
       <div className={apiStyles.groupHead}>
@@ -177,6 +180,21 @@ const ModelSetting = () => {
         <p className={apiStyles.groupDescription}>{t('settingsApiOptionsDescription')}</p>
       </div>
       <ApiOptionsControls value={apiOptions} onChange={setApiOptions} hints />
+      <div className={apiStyles.groupHead}>
+        <div className={apiStyles.groupTitle}>{t('safetyCheckTitle')}</div>
+        <p className={apiStyles.groupDescription}>{t('safetyCheckDescription')}</p>
+      </div>
+      <SafetyCheckField
+        hideLabel
+        value={safetyCheck}
+        onChange={(next) => {
+          // 设置页没有「跟随默认」一档，忽略 undefined
+          if (next) {
+            setSafetyCheck(next)
+          }
+        }}
+        hint={t('safetyCheckOffNote')}
+      />
     </div>
   )
 }

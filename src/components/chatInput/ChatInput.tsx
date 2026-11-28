@@ -18,11 +18,14 @@ import { useIsMobile } from '../../app/viewport.js'
 import {
   sendMessage,
   setSessionApiOptions,
+  setSessionSafetyCheck,
   setSessionSystemPrompt,
   stopReply,
   useChatStore,
 } from '../../services/chat/store.js'
 import type { ApiOptions } from '../../services/api/options.js'
+import type { SafetyCheckLevel } from '../../services/api/safety.js'
+import { isDeepSeekEndpoint } from '../../services/api/adapter.js'
 import {
   addDraftFiles,
   EMPTY_DRAFT,
@@ -102,11 +105,17 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
     const session = sessionId === null ? undefined : state.sessionCache[sessionId]
     return session ? session.systemPrompt : undefined
   })
+  const sessionSafetyCheck = useChatStore((state): SafetyCheckLevel | undefined => {
+    const session = sessionId === null ? undefined : state.sessionCache[sessionId]
+    return session ? session.safetyCheck : undefined
+  })
   // 新会话在发出第一条消息前还没有会话对象，设置先留在本地，发送时交给新会话
   const [draftOptions, setDraftOptions] = useState<ApiOptions | undefined>(undefined)
   const [draftSystemPrompt, setDraftSystemPrompt] = useState<string | undefined>(undefined)
+  const [draftSafetyCheck, setDraftSafetyCheck] = useState<SafetyCheckLevel | undefined>(undefined)
   const options = sessionId === null ? draftOptions : sessionOptions
   const systemPrompt = sessionId === null ? draftSystemPrompt : sessionSystemPrompt
+  const safetyCheck = sessionId === null ? draftSafetyCheck : sessionSafetyCheck
   const setOptions = (next: ApiOptions | undefined) => {
     if (sessionId === null) {
       setDraftOptions(next)
@@ -121,7 +130,16 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
     }
     setSessionSystemPrompt(sessionId, next)
   }
-  const sessionCustomized = options !== undefined || Boolean(systemPrompt)
+  const setSafetyCheckLevel = (next: SafetyCheckLevel | undefined) => {
+    if (sessionId === null) {
+      setDraftSafetyCheck(next)
+      return
+    }
+    setSessionSafetyCheck(sessionId, next)
+  }
+  const safetyCheckDisabled = active === null || !isDeepSeekEndpoint(active.provider)
+  const sessionCustomized =
+    options !== undefined || Boolean(systemPrompt) || safetyCheck !== undefined
   const optionsNote = sessionCustomized
     ? sessionId === null
       ? t('apiOptionsDraftNote')
@@ -281,7 +299,13 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
     // 文本与上传完成态由提交动作读取最新快照，不使用上一次渲染的草稿。
     if (
       !ensureChatReady() ||
-      !sendMessage(sessionId, options, systemPrompt, sessionId === null ? activeRef : undefined)
+      !sendMessage(
+        sessionId,
+        options,
+        systemPrompt,
+        sessionId === null ? activeRef : undefined,
+        sessionId === null ? safetyCheck : undefined
+      )
     ) {
       return
     }
@@ -381,6 +405,9 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
             onChange={setOptions}
             systemPrompt={systemPrompt}
             onSystemPromptChange={setSystemPrompt}
+            safetyCheck={safetyCheck}
+            onSafetyCheckChange={setSafetyCheckLevel}
+            safetyCheckDisabled={safetyCheckDisabled}
             note={optionsNote}
           >
             {({ open, toggle, customized }) => {

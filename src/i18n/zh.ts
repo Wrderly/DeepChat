@@ -181,6 +181,16 @@ export const zh = {
   settingDialogAsideModelOptionLabel: '模型参数',
   settingsApiOptionsDescription:
     '新对话默认使用的生成参数；在输入框底部的「会话设置」入口里可以按会话单独调整，系统提示词也只在该入口内设置。',
+  safetyCheckTitle: '安全审核',
+  safetyCheckDescription:
+    '请求体里的 safety_check 级别，只对 DeepSeek 官方端点生效；自定义提供商不发送该字段。',
+  safetyCheckHigh: '开启',
+  safetyCheckLow: '低',
+  safetyCheckOff: '不传',
+  safetyCheckFollowDefault: '跟随默认',
+  safetyCheckOnlyDeepSeek: '当前提供商不是 DeepSeek 官方端点，该设置不会生效。',
+  safetyCheckOffNote:
+    '「不传」与「低」都是服务端默认的内容检查，只有「开启」会额外审核输入输出，可能被拒答。',
   apiOptionsTitle: '会话设置',
   apiOptionsTooltip: '调整系统提示词、思考强度等参数',
   apiOptionsDefault: '默认',

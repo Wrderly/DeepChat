@@ -7,8 +7,10 @@ import { usePresence } from '../base/presence.js'
 import { useSettings } from '../../services/settings.js'
 import { useIsMobile } from '../../app/viewport.js'
 import type { ApiOptions } from '../../services/api/options.js'
+import type { SafetyCheckLevel } from '../../services/api/safety.js'
 import { useTranslate } from '../../i18n/index.js'
 import { ApiOptionsControls } from './ApiOptionsControls.js'
+import { SafetyCheckField } from './SafetyCheckField.js'
 import styles from './ApiOptions.module.css'
 
 /**
@@ -20,6 +22,9 @@ export const ApiOptionsPanel = ({
   onChange,
   systemPrompt,
   onSystemPromptChange,
+  safetyCheck,
+  onSafetyCheckChange,
+  safetyCheckDisabled = false,
   note,
   children,
 }: {
@@ -31,6 +36,12 @@ export const ApiOptionsPanel = ({
   systemPrompt: string | undefined
   /** 保存系统提示词，空字符串表示恢复内置默认提示词 */
   onSystemPromptChange: (next: string) => void
+  /** 当前会话的安全审核级别，undefined 表示跟随设置页默认值 */
+  safetyCheck: SafetyCheckLevel | undefined
+  /** 保存安全审核级别，undefined 表示恢复跟随默认值 */
+  onSafetyCheckChange: (next: SafetyCheckLevel | undefined) => void
+  /** 当前模型不是 DeepSeek 端点时置为 true，该设置不会生效 */
+  safetyCheckDisabled?: boolean
   /** 浮层底部说明，由调用方按作用范围给出 */
   note: string
   children: (props: { open: boolean; toggle: () => void; customized: boolean }) => ReactNode
@@ -47,10 +58,11 @@ export const ApiOptionsPanel = ({
   )
   useDismiss(open, [anchorRef, floatingRef], () => setOpen(false), { captureEscape: true })
   const drag = useDragDismiss({ direction: 'down', onDismiss: () => setOpen(false) })
-  const customized = value !== undefined || Boolean(systemPrompt)
+  const customized = value !== undefined || Boolean(systemPrompt) || safetyCheck !== undefined
   const reset = () => {
     onChange(undefined)
     onSystemPromptChange('')
+    onSafetyCheckChange(undefined)
   }
   return (
     <>
@@ -91,6 +103,15 @@ export const ApiOptionsPanel = ({
                     onChange={(event) => onSystemPromptChange(event.target.value)}
                   />
                 </div>
+                <SafetyCheckField
+                  value={safetyCheck}
+                  onChange={onSafetyCheckChange}
+                  followDefault
+                  disabled={safetyCheckDisabled}
+                  hint={
+                    safetyCheckDisabled ? t('safetyCheckOnlyDeepSeek') : t('safetyCheckOffNote')
+                  }
+                />
               </div>
               <ApiOptionsControls
                 value={value ?? defaults}

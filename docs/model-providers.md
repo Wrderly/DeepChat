@@ -20,7 +20,7 @@
 
 - **文件**：`client.ts` 的 Files API（`/anthropic/v1/files`）与 `attachments.ts` 的上传队列；
 - **语音**：`services/api/speech.ts` 的 `${API_ORIGIN}/v1/tools/asr|tts`；
-- **DeepSeek 协议扩展**：`safety_check`、`role: 'latest_reminder'`、`deepseek_web_search` / `deepseek_read_url` 工具、`title` 服务端标题。
+- **DeepSeek 协议扩展**：`safety_check`（设置里可选 high / low / 不传）、`role: 'latest_reminder'`、`deepseek_web_search` / `deepseek_read_url` 工具、`title` 服务端标题。
 
 这些扩展不是标准 Anthropic 协议，自定义提供商不会支持，必须做成**可降级的能力开关**，否则接入非 DeepSeek 服务会直接 400。
 
@@ -284,11 +284,11 @@ const headers = {
   max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
   thinking: { type: thinking ? 'enabled' : 'disabled' },
   ...toRequestParams(options, thinking),
+  // 安全审核级别由设置决定：low / high 显式携带，'off' 时请求体里不出现该字段
+  ...(isDeepSeekEndpoint ? toSafetyCheckFields(request.safetyCheck) : {}),
   ...(preset === 'deepseek'
     ? { tools, ...(requestTitle ? { title: { enabled: true } } : {}) }
     : {}),
-  // 指向 DeepSeek 端点的请求显式带上安全审核级别：low 与不传等价
-  ...(isDeepSeekEndpoint ? { safety_check: { level: 'low' } } : {}),
   ...provider.extraBody,
   stream: true,
 }
@@ -594,12 +594,13 @@ session.model?: { providerId, modelId, ... }
 
 1. ~~老用户升级：原有 Key 自动变成 DeepSeek 提供商，历史会话正常打开、续写、重新生成。~~ 按 m00168 的决定取消：项目处于破坏性更新期，不做旧数据迁移，`deepseek-chat:*` 与旧 IndexedDB 库直接忽略。
 2. 新增一个 OpenAI 兼容提供商（如 `https://api.openai.com` + `/v1/chat/completions`），填入 Key、手填模型 `gpt-4o`，能正常流式对话、显示思考（若返回 `reasoning_content`）。
-3. 新增一个 Anthropic 兼容提供商，能流式对话；不发送 `safety_check` / `title` / DeepSeek 工具。
+3. 新增一个 Anthropic 兼容提供商，能流式对话；不发送 `safety_check` / `title` / DeepSeek 工具（`baseUrl` 指向 `api.deepseek.com` 的自定义端点只额外发送 `safety_check`）。
 4. 同一个会话里切换模型：新回复用新模型，旧回复保留各自的模型快照（用于续写与重新生成；界面暂不展示模型名），分支切换不串模型。
 5. 删除正在被历史引用的提供商：历史仍可读，续写回落到默认并提示。
 6. 无模型配置时点击发送：跳转「模型服务」页而不是报错。
 7. 非 DeepSeek 提供商下：搜索/语音/文档按钮不可见或禁用，且没有请求带私有扩展字段。
 8. `pnpm type`、`pnpm lint`、`pnpm build` 全部通过。
+9. 安全审核：设置页「模型参数」可选 high / low / 不传作为新对话默认值（默认不传），会话浮层可逐会话覆盖或跟随默认；只有 DeepSeek 端点发送 `safety_check`，重新生成与续写沿用消息上的快照，`provider.extraBody` 里手写的值优先级最高。`off` 与 `low` 都是服务端默认检查，只有 `high` 会额外审核输入输出。
 
 ## 14. 风险与对策
 

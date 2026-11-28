@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { parseApiOptions, type ApiOptions } from './api/options.js'
+import { normalizeSafetyCheckLevel, type SafetyCheckLevel } from './api/safety.js'
 import type { TtsVoice } from './api/speech.js'
 import { normalizeLocation, type UserLocation } from './location.js'
 
@@ -10,7 +11,7 @@ export type ThemePreference = 'light' | 'dark' | 'system'
 
 /**
  * 本机设置，存 localStorage：语言、主题、位置、朗读音色、深度思考与智能搜索开关、
- * 侧边栏收起状态、新对话默认使用的生成参数。API Key 归属各自的模型提供商，不在这里。
+ * 侧边栏收起状态、新对话默认使用的生成参数与安全审核级别。API Key 归属各自的模型提供商，不在这里。
  */
 type Settings = {
   locale: Locale
@@ -21,6 +22,8 @@ type Settings = {
   search: boolean
   siderCollapsed: boolean
   apiOptions: ApiOptions
+  /** 新对话默认的安全审核级别；会话可单独覆盖 */
+  safetyCheck: SafetyCheckLevel
 }
 
 const KEYS = {
@@ -32,6 +35,7 @@ const KEYS = {
   search: 'deepchat:search',
   siderCollapsed: 'deepchat:sider-collapsed',
   apiOptions: 'deepchat:api-options',
+  safetyCheck: 'deepchat:safety-check',
 } as const
 
 const read = (key: string) => {
@@ -88,8 +92,12 @@ const initialThemePreference = (): ThemePreference => {
   return saved === 'light' || saved === 'dark' ? saved : 'system'
 }
 
-/** 未保存过时使用服务端默认音色 stella（海星） */
+/** 未保存过时使用服务器默认音色 stella（海星） */
 const initialTtsVoice = (): TtsVoice => (read(KEYS.ttsVoice) === 'tide' ? 'tide' : 'stella')
+
+/** 未保存过时不发送 safety_check，由服务端按默认策略检查 */
+const initialSafetyCheck = (): SafetyCheckLevel =>
+  normalizeSafetyCheckLevel(read(KEYS.safetyCheck)) ?? 'off'
 
 export const useSettings = create<Settings>(() => ({
   locale: initialLocale(),
@@ -100,6 +108,7 @@ export const useSettings = create<Settings>(() => ({
   search: read(KEYS.search) === 'true',
   siderCollapsed: read(KEYS.siderCollapsed) === 'true',
   apiOptions: parseApiOptions(read(KEYS.apiOptions)),
+  safetyCheck: initialSafetyCheck(),
 }))
 
 export const setLocale = (locale: Locale) => {
@@ -142,4 +151,10 @@ export const setSiderCollapsed = (siderCollapsed: boolean) => {
 export const setApiOptions = (apiOptions: ApiOptions) => {
   write(KEYS.apiOptions, JSON.stringify(apiOptions))
   useSettings.setState({ apiOptions })
+}
+
+/** 新对话默认的安全审核级别；已有会话的覆盖值与消息快照不受影响 */
+export const setSafetyCheck = (safetyCheck: SafetyCheckLevel) => {
+  write(KEYS.safetyCheck, safetyCheck)
+  useSettings.setState({ safetyCheck })
 }
