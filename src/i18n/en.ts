@@ -193,14 +193,12 @@ export const en = {
   safetyCheckTitle: 'Safety check',
   safetyCheckDescription:
     'The safety_check level sent in the request body. Only DeepSeek endpoints receive this field; custom providers do not.',
-  safetyCheckHigh: 'On',
+  safetyCheckHigh: 'High',
   safetyCheckLow: 'Low',
-  safetyCheckOff: 'Omit',
+  safetyCheckOff: 'Off',
   safetyCheckFollowDefault: 'Default',
   safetyCheckOnlyDeepSeek:
     'The current provider is not an official DeepSeek endpoint, so this setting has no effect.',
-  safetyCheckOffNote:
-    '“Omit” and “Low” both leave the server on its default checks; only “On” adds extra input and output moderation and may refuse answers.',
   apiOptionsTitle: 'Chat settings',
   apiOptionsTooltip: 'Adjust the system prompt, thinking effort, and more',
   apiOptionsDefault: 'Default',

@@ -193,7 +193,6 @@ const ModelSetting = () => {
             setSafetyCheck(next)
           }
         }}
-        hint={t('safetyCheckOffNote')}
       />
     </div>
   )

@@ -184,13 +184,11 @@ export const zh = {
   safetyCheckTitle: '安全审核',
   safetyCheckDescription:
     '请求体里的 safety_check 级别，只对 DeepSeek 官方端点生效；自定义提供商不发送该字段。',
-  safetyCheckHigh: '开启',
+  safetyCheckHigh: '高',
   safetyCheckLow: '低',
-  safetyCheckOff: '不传',
+  safetyCheckOff: '关',
   safetyCheckFollowDefault: '跟随默认',
   safetyCheckOnlyDeepSeek: '当前提供商不是 DeepSeek 官方端点，该设置不会生效。',
-  safetyCheckOffNote:
-    '「不传」与「低」都是服务端默认的内容检查，只有「开启」会额外审核输入输出，可能被拒答。',
   apiOptionsTitle: '会话设置',
   apiOptionsTooltip: '调整系统提示词、思考强度等参数',
   apiOptionsDefault: '默认',

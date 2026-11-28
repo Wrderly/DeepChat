@@ -108,9 +108,7 @@ export const ApiOptionsPanel = ({
                   onChange={onSafetyCheckChange}
                   followDefault
                   disabled={safetyCheckDisabled}
-                  hint={
-                    safetyCheckDisabled ? t('safetyCheckOnlyDeepSeek') : t('safetyCheckOffNote')
-                  }
+                  hint={safetyCheckDisabled ? t('safetyCheckOnlyDeepSeek') : undefined}
                 />
               </div>
               <ApiOptionsControls

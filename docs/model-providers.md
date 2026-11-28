@@ -20,7 +20,7 @@
 
 - **文件**：`client.ts` 的 Files API（`/anthropic/v1/files`）与 `attachments.ts` 的上传队列；
 - **语音**：`services/api/speech.ts` 的 `${API_ORIGIN}/v1/tools/asr|tts`；
-- **DeepSeek 协议扩展**：`safety_check`（设置里可选 high / low / 不传）、`role: 'latest_reminder'`、`deepseek_web_search` / `deepseek_read_url` 工具、`title` 服务端标题。
+- **DeepSeek 协议扩展**：`safety_check`（设置里可选 高 / 低 / 关）、`role: 'latest_reminder'`、`deepseek_web_search` / `deepseek_read_url` 工具、`title` 服务端标题。
 
 这些扩展不是标准 Anthropic 协议，自定义提供商不会支持，必须做成**可降级的能力开关**，否则接入非 DeepSeek 服务会直接 400。
 
@@ -600,7 +600,7 @@ session.model?: { providerId, modelId, ... }
 6. 无模型配置时点击发送：跳转「模型服务」页而不是报错。
 7. 非 DeepSeek 提供商下：搜索/语音/文档按钮不可见或禁用，且没有请求带私有扩展字段。
 8. `pnpm type`、`pnpm lint`、`pnpm build` 全部通过。
-9. 安全审核：设置页「模型参数」可选 high / low / 不传作为新对话默认值（默认不传），会话浮层可逐会话覆盖或跟随默认；只有 DeepSeek 端点发送 `safety_check`，重新生成与续写沿用消息上的快照，`provider.extraBody` 里手写的值优先级最高。`off` 与 `low` 都是服务端默认检查，只有 `high` 会额外审核输入输出。
+9. 安全审核：设置页「模型参数」可选 高 / 低 / 关作为新对话默认值（默认关），会话浮层可逐会话覆盖或跟随默认；只有 DeepSeek 端点发送 `safety_check`，重新生成与续写沿用消息上的快照，`provider.extraBody` 里手写的值优先级最高。`关`（不发送）与 `低` 都是服务端默认检查，只有 `高` 会额外审核输入输出。
 
 ## 14. 风险与对策
 
